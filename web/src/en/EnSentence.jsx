@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { TYPING_INPUT, focusNextInput } from '../focusNext.js';
 
 /**
- * 영어 한 줄. [한글 발음 · 고스트 텍스트 위에 타이핑 · 해석]
+ * 영어 한 줄. [한글 발음 · 해석 · 고스트 텍스트 위에 타이핑]
  *
  * 원문을 흐릿하게 깔고 그 위에 입력한다. 깔린 글자와 입력 글자가 같은 자리에
  * 오도록 둘의 글꼴·크기·padding을 똑같이 맞춰 겹쳐 둔다.
+ *
+ * 해석은 일본어와 같이 입력란 **위에** 둔다. 세 언어의 순서를 맞춘다.
  */
 function EnLine({ line, initial, onChange }) {
   const [value, setValue] = useState(initial ?? '');
@@ -18,6 +20,7 @@ function EnLine({ line, initial, onChange }) {
   return (
     <div className="line">
       <p className="en-pron">{line.pron}</p>
+      <p className="line-gloss">{line.gloss}</p>
 
       <div className="en-field">
         <span className="en-ghost" aria-hidden="true">
@@ -40,8 +43,6 @@ function EnLine({ line, initial, onChange }) {
           spellCheck={false}
         />
       </div>
-
-      <p className="line-gloss">{line.gloss}</p>
     </div>
   );
 }

@@ -523,6 +523,17 @@ body {
   margin-top: 6px;
 }
 
-.notes-back {
-  margin-bottom: 4px;
+
+.tab-danger {
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.app-foot {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
 }

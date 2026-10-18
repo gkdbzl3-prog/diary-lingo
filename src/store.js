@@ -75,3 +75,9 @@ export function saveTyping(id, lang, typing) {
   doc.typingUpdatedAt = new Date().toISOString();
   return writeDiary(doc);
 }
+
+/** 일기를 지운다. 되돌릴 수 없으므로 화면에서 두 번 확인한 뒤에만 부른다. */
+export function removeDiary(id) {
+  if (!isValidId(id)) throw new Error(`쓸 수 없는 id: ${id}`);
+  fs.rmSync(fileOf(id));
+}

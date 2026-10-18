@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { createDiary, getDiary, listDiaries, retranslateDiary, saveTyping } from './api.js';
+import { createDiary, deleteDiary, getDiary, listDiaries, retranslateDiary, saveTyping } from './api.js';
 import { useTypingStore } from './useTypingStore.js';
 import ZhSentence from './zh/ZhSentence.jsx';
 import JaSentence from './ja/JaSentence.jsx';
@@ -26,6 +26,8 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // 삭제는 되돌릴 수 없다. 한 번 더 눌러야 지워진다.
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const store = useTypingStore();
   const topRef = useRef(null);
@@ -40,6 +42,7 @@ export default function App() {
   const openDoc = useCallback(
     (next) => {
       setDoc(next);
+      setConfirmDelete(false);
       // 원문은 지우지 않는다. 고쳐서 다시 변환할 수 있게 입력란에 그대로 둔다.
       setDraft(next?.text ?? '');
       store.load(next?.typing, next?.typingUpdatedAt);
@@ -97,6 +100,24 @@ export default function App() {
     setError('');
     openDoc(null);
     setDraft('');
+  };
+
+  const remove = async () => {
+    if (!doc) return;
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    setConfirmDelete(false);
+    setError('');
+    try {
+      await deleteDiary(doc.id);
+      const list = await refresh();
+      openDoc(list.length > 0 ? await getDiary(list[0].id) : null);
+      if (list.length === 0) setDraft('');
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const save = useCallback(async () => {
@@ -163,9 +184,24 @@ export default function App() {
           ))}
         </select>
         {doc ? (
-          <button type="button" className="tab" onClick={newDiary}>
-            새 일기
-          </button>
+          <>
+            <button type="button" className="tab" onClick={newDiary}>
+              새 일기
+            </button>
+            <button
+              type="button"
+              className={confirmDelete ? 'tab tab-danger' : 'tab'}
+              onClick={remove}
+              title={`${doc.id} 지우기 (되돌릴 수 없다)`}
+            >
+              {confirmDelete ? '정말 지운다' : '삭제'}
+            </button>
+            {confirmDelete ? (
+              <button type="button" className="tab" onClick={() => setConfirmDelete(false)}>
+                취소
+              </button>
+            ) : null}
+          </>
         ) : null}
       </header>
 
@@ -187,6 +223,12 @@ export default function App() {
           {busy ? '번역 중…' : doc ? '다시 변환' : '세 언어로'}
         </button>
       </form>
+
+      {confirmDelete ? (
+        <p className="error">
+          {doc?.id}를 지운다. 번역 결과와 타이핑한 내용이 함께 사라지고 되돌릴 수 없다.
+        </p>
+      ) : null}
 
       {busy ? (
         <p className="hint">중국어·일본어·영어를 한꺼번에 번역한다. 문장 10개쯤이면 2~3분 걸린다.</p>
@@ -261,8 +303,16 @@ export default function App() {
               onChange={report}
             />
           ))}
-          <Notes notes={current.notes} anchorRef={notesRef} onBack={() => scrollTo(topRef)} />
+          <Notes notes={current.notes} anchorRef={notesRef} />
         </>
+      ) : null}
+
+      {doc ? (
+        <footer className="app-foot">
+          <button type="button" className="tab" onClick={() => scrollTo(topRef)}>
+            ↑ 맨 위로
+          </button>
+        </footer>
       ) : null}
     </main>
   );

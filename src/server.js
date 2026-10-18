@@ -9,6 +9,7 @@ import {
   listDiaries,
   nextId,
   readDiary,
+  removeDiary,
   saveTyping,
   titleOf,
   writeDiary,
@@ -34,6 +35,20 @@ app.get('/api/diaries/:id', (req, res) => {
     return;
   }
   res.json(readDiary(id));
+});
+
+app.delete('/api/diaries/:id', (req, res) => {
+  const { id } = req.params;
+  if (!hasDiary(id)) {
+    res.status(404).json({ error: `일기를 찾을 수 없다: ${id}` });
+    return;
+  }
+  try {
+    removeDiary(id);
+    res.json({ ok: true, id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 /**

@@ -1,17 +1,12 @@
 import React from 'react';
 
-export default function Notes({ notes, anchorRef, onBack }) {
+export default function Notes({ notes, anchorRef }) {
   const vocab = notes?.vocab ?? [];
   const highlights = notes?.highlights ?? [];
   if (vocab.length === 0 && highlights.length === 0) return null;
 
   return (
     <section className="notes" ref={anchorRef} id="notes">
-      {onBack ? (
-        <button type="button" className="tab notes-back" onClick={onBack}>
-          연습으로 올라가기
-        </button>
-      ) : null}
       {vocab.length > 0 ? (
         <>
           <h2>어휘·표현</h2>

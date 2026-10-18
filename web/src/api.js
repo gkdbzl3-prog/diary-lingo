@@ -28,3 +28,7 @@ export const retranslateDiary = (id, text, langs) =>
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ text, langs }),
   }).then(json);
+
+/** 일기를 지운다. 되돌릴 수 없다. */
+export const deleteDiary = (id) =>
+  fetch(`/api/diaries/${id}`, { method: 'DELETE' }).then(json);
