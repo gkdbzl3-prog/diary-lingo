@@ -72,7 +72,7 @@ export default function App() {
     setBusy(true);
     setError('');
     try {
-      const created = await createDiary(draft, ['zh']);
+      const created = await createDiary(draft, ORDER);
       setDraft('');
       await refresh();
       openDoc(created);
@@ -156,9 +156,15 @@ export default function App() {
           }}
         />
         <button type="submit" disabled={busy || draft.trim() === ''}>
-          {busy ? '번역 중…' : '중국어로'}
+          {busy ? '번역 중…' : '세 언어로'}
         </button>
       </form>
+
+      {busy ? (
+        <p className="hint">
+          중국어·일본어·영어를 한꺼번에 번역한다. 문장 10개쯤이면 2~3분 걸린다.
+        </p>
+      ) : null}
 
       {error ? <p className="error">{error}</p> : null}
 

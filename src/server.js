@@ -75,7 +75,7 @@ app.post('/api/diaries', async (req, res) => {
     return;
   }
 
-  const langs = Array.isArray(req.body?.langs) && req.body.langs.length > 0 ? req.body.langs : ['zh'];
+  const langs = Array.isArray(req.body?.langs) && req.body.langs.length > 0 ? req.body.langs : SUPPORTED;
   const unknown = langs.filter((l) => !SUPPORTED.includes(l));
   if (unknown.length > 0) {
     res.status(400).json({ error: `모르는 언어: ${unknown.join(', ')}` });

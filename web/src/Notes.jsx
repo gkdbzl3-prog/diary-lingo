@@ -27,7 +27,7 @@ export default function Notes({ notes }) {
 
       {highlights.length > 0 ? (
         <>
-          <h2>짚어볼 표현</h2>
+          <h2>문법 포인트</h2>
           <dl className="highlights">
             {highlights.map((h, i) => (
               <div key={i}>
