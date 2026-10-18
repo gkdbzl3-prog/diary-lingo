@@ -104,9 +104,34 @@ body {
   font-size: 14px;
 }
 
+/* flex 안에서 버튼이 줄어들면 글자가 잘린다. 버튼은 제 크기를 지킨다. */
+.new-diary button,
+.qa-form button,
+.dict-form button,
+.tab,
+.save {
+  flex: 0 0 auto;
+}
+
 .new-diary button {
   cursor: pointer;
   white-space: nowrap;
+}
+
+/* 좁은 화면에서는 입력란이 한 줄을 다 쓰고 버튼이 아래 오른쪽에 붙는다.
+   옆에 두면 textarea가 버튼을 밀어 글자가 잘렸다. */
+@media (max-width: 560px) {
+  .new-diary {
+    flex-wrap: wrap;
+  }
+
+  .new-diary textarea {
+    flex: 1 1 100%;
+  }
+
+  .new-diary button {
+    margin-left: auto;
+  }
 }
 
 .new-diary button:disabled {
@@ -744,28 +769,46 @@ body {
   transform: none;
 }
 
-/* 손잡이는 패널에 붙어 있어서 열리면 같이 따라 나간다 */
+/* 손잡이는 패널에 붙어 있어서 열리면 같이 따라 나간다.
+   기본이 접힌 상태라 이것만 보인다. 눈에 띄어야 하므로 넉넉하게 잡는다. */
 .dict-toggle {
   position: absolute;
-  left: -26px;
+  left: -38px;
   top: 50%;
   transform: translateY(-50%);
-  width: 26px;
-  height: 64px;
+  width: 38px;
+  height: 108px;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   font: inherit;
-  font-size: 18px;
   line-height: 1;
   color: var(--muted);
   background: var(--card);
   border: 1px solid var(--line);
   border-right: none;
-  border-radius: 8px 0 0 8px;
+  border-radius: 10px 0 0 10px;
+  box-shadow: -2px 0 6px rgb(0 0 0 / 7%);
   cursor: pointer;
 }
 
-.dict-toggle:hover {
+.dict-toggle-arrow {
+  font-size: 22px;
+}
+
+.dict-toggle-label {
+  writing-mode: vertical-rl;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+}
+
+.dict-toggle:hover,
+.dict-toggle:focus-visible {
   color: var(--fg);
+  border-color: var(--muted);
 }
 
 .dict-body {

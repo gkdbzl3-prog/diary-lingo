@@ -1,18 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { lookupTerm } from './api.js';
 
-const WIDE = '(min-width: 1100px)';
-
 /**
  * 옆에 두는 작은 사전. 긁어서 붙여 넣으면 바로 뜻이 뜬다.
  *
- * 넓은 화면에서는 오른쪽에 붙어 있고 본문이 그만큼 왼쪽으로 비켜 준다.
- * 좁은 화면에서는 오른쪽 가장자리의 화살표만 보이고, 누르면 본문 위로 덮으며 열린다.
+ * 기본은 접힌 상태다. 손잡이만 오른쪽 가장자리에 붙어 있고, 누르면 열린다.
+ * 넓은 화면(1100px 이상)에서는 열린 동안 본문이 그만큼 왼쪽으로 비켜 주고,
+ * 좁은 화면에서는 본문 위로 덮는다.
  */
 export default function Dictionary({ lang, label }) {
-  const [open, setOpen] = useState(() =>
-    typeof window !== 'undefined' ? window.matchMedia(WIDE).matches : false,
-  );
+  const [open, setOpen] = useState(false);
   const [term, setTerm] = useState('');
   const [entry, setEntry] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -64,7 +61,8 @@ export default function Dictionary({ lang, label }) {
         title={open ? '사전 닫기' : '사전 열기'}
         aria-label={open ? '사전 닫기' : '사전 열기'}
       >
-        {open ? '›' : '‹'}
+        <span className="dict-toggle-arrow">{open ? '›' : '‹'}</span>
+        <span className="dict-toggle-label">사전</span>
       </button>
 
       <div className="dict-body">
