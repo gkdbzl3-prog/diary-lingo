@@ -6,6 +6,7 @@ import JaSentence from './ja/JaSentence.jsx';
 import EnSentence from './en/EnSentence.jsx';
 import FullText from './FullText.jsx';
 import Notes from './Notes.jsx';
+import Qa from './Qa.jsx';
 
 const LABEL = { zh: '중국어', ja: '일본어', en: '영어' };
 const ORDER = ['zh', 'ja', 'en'];
@@ -331,6 +332,16 @@ export default function App() {
           ))}
           <Notes notes={current.notes} anchorRef={notesRef} />
         </>
+      ) : null}
+
+      {current ? (
+        <Qa
+          key={`${doc.id}:${lang}`}
+          diaryId={doc.id}
+          lang={lang}
+          label={LABEL[lang]}
+          initialTurns={doc.qa?.[lang] ?? []}
+        />
       ) : null}
 
       {doc ? (

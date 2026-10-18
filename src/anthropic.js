@@ -97,3 +97,55 @@ async function send(params, withFallback) {
     throw err;
   }
 }
+
+/**
+ * 맥락을 캐시에 올려 두고 글로 답을 받는다. Q&A용.
+ *
+ * 맥락(일기 원문 + 번역 + notes)은 질문이 몇 개가 되든 똑같으므로 첫 user 메시지
+ * 맨 앞에 두고 캐시 구간을 끊는다. 질문은 그 뒤에 온다.
+ * 대화가 길어지면 앞선 문답도 그대로 프리픽스가 되므로 꼬리에도 캐시를 건다.
+ *
+ * @param {object} args
+ * @param {string} args.system
+ * @param {string} args.context 질문이 바뀌어도 글자 하나까지 같아야 한다
+ * @param {{role: 'user'|'assistant', text: string}[]} args.turns 첫 항목은 user
+ */
+export async function askText({ system, context, turns }) {
+  const messages = turns.map((turn, i) => {
+    if (turn.role !== 'user') return { role: 'assistant', content: turn.text };
+    if (i > 0) return { role: 'user', content: turn.text };
+    return {
+      role: 'user',
+      content: [
+        { type: 'text', text: context, cache_control: { type: 'ephemeral' } },
+        { type: 'text', text: turn.text },
+      ],
+    };
+  });
+
+  const params = {
+    model: config.model,
+    max_tokens: config.qaMaxTokens,
+    system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
+    messages,
+    // 마지막 블록에 자동으로 캐시를 걸어 다음 질문 때 지난 문답을 다시 읽는다.
+    cache_control: { type: 'ephemeral' },
+    output_config: { effort: config.qaEffort },
+  };
+
+  const message = await send(params, config.serverFallback);
+
+  if (message.stop_reason === 'refusal') {
+    throw new Error(`모델이 요청을 거절했다: ${JSON.stringify(message.stop_details)}`);
+  }
+
+  const text = message.content
+    .filter((block) => block.type === 'text')
+    .map((block) => block.text)
+    .join('')
+    .trim();
+
+  if (text === '') throw new Error('답이 비어 있다');
+
+  return { text, usage: message.usage, truncated: message.stop_reason === 'max_tokens' };
+}

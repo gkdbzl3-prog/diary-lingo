@@ -623,3 +623,101 @@ body {
 .line-done {
   border-left-color: var(--ok);
 }
+
+/* ── 하단 Q&A ───────────────────────────────────────────
+   일기 원문과 그 언어 번역을 맥락으로 넣고 답은 한국어로 받는다. */
+
+.qa {
+  margin-top: 36px;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+}
+
+.qa-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.qa h2 {
+  font-size: 14px;
+  margin: 0;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.qa-thread {
+  margin-top: 12px;
+}
+
+/* 질문은 들여쓰고 왼쪽에 선을 둬서 답과 구분한다 */
+.qa-q {
+  margin: 18px 0 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--active);
+  color: var(--muted);
+  font-size: 14px;
+  white-space: pre-wrap;
+}
+
+.qa-a {
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.qa-a p {
+  margin: 8px 0 0;
+}
+
+.qa-a ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.qa-a li {
+  margin: 3px 0;
+}
+
+.qa-form {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  margin-top: 16px;
+}
+
+.qa-form textarea {
+  flex: 1;
+  font: inherit;
+  font-size: 14px;
+  color: inherit;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  resize: vertical;
+}
+
+.qa-form textarea:focus {
+  outline: none;
+  border-color: var(--active);
+}
+
+.qa-form button {
+  font: inherit;
+  font-size: 13px;
+  color: var(--fg);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.qa-form button:disabled {
+  color: var(--faint);
+  background: transparent;
+  cursor: default;
+}

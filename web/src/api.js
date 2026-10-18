@@ -32,3 +32,14 @@ export const retranslateDiary = (id, text, langs) =>
 /** 일기를 지운다. 되돌릴 수 없다. */
 export const deleteDiary = (id) =>
   fetch(`/api/diaries/${id}`, { method: 'DELETE' }).then(json);
+
+/** 하단 Q&A. 지난 문답에 이어서 묻는다. 답은 한국어로 온다. */
+export const askQa = (id, lang, question) =>
+  fetch(`/api/diaries/${id}/qa`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ lang, question }),
+  }).then(json);
+
+export const clearQa = (id, lang) =>
+  fetch(`/api/diaries/${id}/qa?lang=${lang}`, { method: 'DELETE' }).then(json);

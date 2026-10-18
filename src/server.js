@@ -2,6 +2,7 @@ import path from 'node:path';
 import express from 'express';
 import { splitKoreanDiary } from './sentences.js';
 import { translate } from './translate.js';
+import { ask } from './qa.js';
 import { SUPPORTED } from './langs.js';
 import { config } from './config.js';
 import {
@@ -10,6 +11,7 @@ import {
   nextId,
   readDiary,
   removeDiary,
+  saveQa,
   saveTyping,
   titleOf,
   writeDiary,
@@ -124,6 +126,81 @@ app.put('/api/diaries/:id/typing', (req, res) => {
 });
 
 /**
+ * 하단 Q&A. 일기 원문과 해당 언어 번역을 맥락으로 넣고 한국어로 답을 받는다.
+ * 지난 문답에 이어서 묻고, 문답은 일기에 함께 저장한다.
+ * body: { lang, question }
+ */
+app.post('/api/diaries/:id/qa', async (req, res) => {
+  const { id } = req.params;
+  if (!hasDiary(id)) {
+    res.status(404).json({ error: `일기를 찾을 수 없다: ${id}` });
+    return;
+  }
+
+  const lang = req.body?.lang;
+  const question = typeof req.body?.question === 'string' ? req.body.question.trim() : '';
+
+  if (!SUPPORTED.includes(lang)) {
+    res.status(400).json({ error: `모르는 언어: ${lang}` });
+    return;
+  }
+  if (question === '') {
+    res.status(400).json({ error: '질문이 비어 있다' });
+    return;
+  }
+  if (!process.env.ANTHROPIC_API_KEY) {
+    res.status(500).json({ error: 'ANTHROPIC_API_KEY가 없다' });
+    return;
+  }
+
+  const doc = readDiary(id);
+  if (!doc.langs?.[lang]) {
+    res.status(400).json({ error: `이 일기에는 ${lang} 번역이 없다` });
+    return;
+  }
+  const history = doc.qa?.[lang] ?? [];
+
+  try {
+    const { text, usage, truncated } = await ask({ doc, lang, history, question });
+    console.log(
+      `[qa ${id} ${lang}] 입력 ${usage.input_tokens}` +
+        ` / 캐시 쓰기 ${usage.cache_creation_input_tokens ?? 0}` +
+        ` 읽기 ${usage.cache_read_input_tokens ?? 0}` +
+        ` / 출력 ${usage.output_tokens}`,
+    );
+    const turns = [
+      ...history,
+      { role: 'user', text: question, at: new Date().toISOString() },
+      { role: 'assistant', text, at: new Date().toISOString() },
+    ];
+    saveQa(id, lang, turns);
+    res.json({ turns, truncated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** 그 언어의 문답을 통째로 지운다. */
+app.delete('/api/diaries/:id/qa', (req, res) => {
+  const { id } = req.params;
+  if (!hasDiary(id)) {
+    res.status(404).json({ error: `일기를 찾을 수 없다: ${id}` });
+    return;
+  }
+  const lang = req.query?.lang;
+  if (!SUPPORTED.includes(lang)) {
+    res.status(400).json({ error: `모르는 언어: ${lang}` });
+    return;
+  }
+  try {
+    saveQa(id, lang, []);
+    res.json({ turns: [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
  * 일기를 올리면 문장을 나누고 언어별로 번역해서 저장한다.
  * body: { text, langs?: ['zh','ja','en'] }
  */
@@ -183,6 +260,7 @@ app.put('/api/diaries/:id', async (req, res) => {
 
   const previous = readDiary(id);
   const { sentences } = splitKoreanDiary(text);
+  // 문장과 번역이 달라지므로 타이핑과 문답은 맥락이 어긋난다. 둘 다 버린다.
   const doc = {
     id: previous.id,
     title: titleOf(text),

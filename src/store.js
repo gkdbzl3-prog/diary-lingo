@@ -81,3 +81,11 @@ export function removeDiary(id) {
   if (!isValidId(id)) throw new Error(`쓸 수 없는 id: ${id}`);
   fs.rmSync(fileOf(id));
 }
+
+/** Q&A 문답을 저장한다. 번역 결과와 타이핑은 건드리지 않는다. */
+export function saveQa(id, lang, turns) {
+  const doc = readDiary(id);
+  doc.qa = doc.qa ?? {};
+  doc.qa[lang] = turns;
+  return writeDiary(doc);
+}

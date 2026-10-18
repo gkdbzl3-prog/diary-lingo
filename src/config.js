@@ -45,4 +45,8 @@ export const config = {
 
   // 검증에 실패한 문장만 다시 물어보는 횟수
   maxRetries: 2,
+
+  // Q&A. 답은 한 문단쯤이라 번역보다 짧고 얕게 가도 된다.
+  qaMaxTokens: 8000,
+  qaEffort: process.env.DIARY_LINGO_QA_EFFORT ?? 'medium',
 };
