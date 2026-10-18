@@ -8,6 +8,7 @@
   --accent: #b4552d;
   --card: #ffffff;
   --line: #e8e3d7;
+  --group: #f4f1e9;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -21,6 +22,7 @@
     --accent: #e08457;
     --card: #1f1e1b;
     --line: #2c2a26;
+    --group: #262420;
   }
 }
 
@@ -395,9 +397,28 @@ body {
 
 /* ── 일본어·영어: 칸 없이 줄 단위 ───────────────────────── */
 
+/* 일본어·영어는 칸이 없어서 [요미가나·발음·해석·입력]이 그냥 쌓인 줄로 보인다.
+   한 줄당 한 묶음이라는 게 보이도록 세트 사이는 넓게, 세트 안은 바짝 붙인다.
+   그리고 입력 중인 세트에만 옅은 배경과 왼쪽 선을 둬서 지금 어디를 치는지 보인다. */
 .lines-text {
-  --cell: 44px; /* 칸을 쓰지 않아도 간격·글자 크기 기준은 같이 쓴다 */
+  --cell: 44px; /* 칸을 쓰지 않아도 글자 크기 기준은 같이 쓴다 */
+  /* 세트마다 위아래 9px padding이 더 붙으므로 실제 벌어짐은 40px쯤이다.
+     세트 안은 2~3px이라 한 묶음으로 읽힌다. */
   gap: 22px;
+}
+
+.lines-text .line {
+  gap: 0;
+  /* 왼쪽 선(2px)과 padding을 합쳐 0이 되게 음수 margin을 줘서 글자가 밀리지 않는다 */
+  margin: 0 -12px;
+  padding: 9px 12px 9px 10px;
+  border-left: 2px solid transparent;
+  border-radius: 0 8px 8px 0;
+}
+
+.lines-text .line:focus-within {
+  background: var(--group);
+  border-left-color: var(--accent);
 }
 
 .ja-input,
@@ -436,12 +457,12 @@ body {
 .en-pron {
   margin: 0;
   font-size: 13px;
+  line-height: 1.45;
   color: var(--faint);
 }
 
 .en-field {
   position: relative;
-  margin-top: 4px;
   border-bottom: 1px solid var(--grid);
 }
 
@@ -499,7 +520,7 @@ body {
 .ja-kana,
 .ja-pron {
   margin: 0;
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 .ja-kana {
@@ -513,18 +534,27 @@ body {
 }
 
 /* 해석이 입력란 위로 올라갔다. 이제 이게 "무엇을 쓸지"를 알려 주는 주인공이라
-   본문보다 조금 키운다. */
+   본문보다 조금 키운다. 입력란과는 바짝 붙인다(같은 묶음으로 보이게). */
 .lines-text .line-gloss {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   font-size: 15px;
 }
 
-.lines-text .ja-input {
-  margin-top: 6px;
+.lines-text .ja-input,
+.lines-text .en-field {
+  margin-top: 2px;
 }
 
 
-.tab-danger {
+/* 삭제는 호버하면 빨갛게. 한 번 눌러 켜진 상태(tab-armed)도 빨갛게 둬서
+   지금 누르면 정말 지워진다는 걸 보이게 한다. */
+.tab-delete:hover,
+.tab-delete:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.tab-delete.tab-armed {
   color: var(--accent);
   border-color: var(--accent);
   font-weight: 600;

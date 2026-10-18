@@ -188,13 +188,18 @@ export default function App() {
             <button type="button" className="tab" onClick={newDiary}>
               새 일기
             </button>
+            {/* 한 번 누르면 옆에 취소가 생긴다. 삭제를 한 번 더 누르면 그때 지워진다. */}
             <button
               type="button"
-              className={confirmDelete ? 'tab tab-danger' : 'tab'}
+              className={confirmDelete ? 'tab tab-delete tab-armed' : 'tab tab-delete'}
               onClick={remove}
-              title={`${doc.id} 지우기 (되돌릴 수 없다)`}
+              title={
+                confirmDelete
+                  ? `한 번 더 누르면 ${doc.id}가 지워진다`
+                  : `${doc.id} 지우기 (되돌릴 수 없다)`
+              }
             >
-              {confirmDelete ? '정말 지운다' : '삭제'}
+              삭제
             </button>
             {confirmDelete ? (
               <button type="button" className="tab" onClick={() => setConfirmDelete(false)}>
@@ -226,7 +231,8 @@ export default function App() {
 
       {confirmDelete ? (
         <p className="error">
-          {doc?.id}를 지운다. 번역 결과와 타이핑한 내용이 함께 사라지고 되돌릴 수 없다.
+          삭제를 한 번 더 누르면 {doc?.id}가 지워진다. 번역 결과와 타이핑한 내용이 함께
+          사라지고 되돌릴 수 없다.
         </p>
       ) : null}
 
