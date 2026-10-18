@@ -14,3 +14,9 @@ export const createDiary = (text, langs) =>
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ text, langs }),
   }).then(json);
+export const saveTyping = (id, lang, typing) =>
+  fetch(`/api/diaries/${id}/typing`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ lang, typing }),
+  }).then(json);

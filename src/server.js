@@ -9,6 +9,7 @@ import {
   listDiaries,
   nextId,
   readDiary,
+  saveTyping,
   titleOf,
   writeDiary,
 } from './store.js';
@@ -33,6 +34,34 @@ app.get('/api/diaries/:id', (req, res) => {
     return;
   }
   res.json(readDiary(id));
+});
+
+/**
+ * 타이핑 중인 내용 임시저장. 화면의 "임시저장" 버튼이 부른다.
+ * body: { lang, typing }
+ */
+app.put('/api/diaries/:id/typing', (req, res) => {
+  const { id } = req.params;
+  if (!hasDiary(id)) {
+    res.status(404).json({ error: `일기를 찾을 수 없다: ${id}` });
+    return;
+  }
+  const lang = req.body?.lang;
+  if (!SUPPORTED.includes(lang)) {
+    res.status(400).json({ error: `모르는 언어: ${lang}` });
+    return;
+  }
+  if (typeof req.body?.typing !== 'object' || req.body.typing === null) {
+    res.status(400).json({ error: 'typing이 없다' });
+    return;
+  }
+
+  try {
+    const doc = saveTyping(id, lang, req.body.typing);
+    res.json({ ok: true, typingUpdatedAt: doc.typingUpdatedAt });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 /**

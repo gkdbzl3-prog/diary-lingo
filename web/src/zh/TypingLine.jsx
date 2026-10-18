@@ -1,5 +1,6 @@
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { deleteBack, firstTypeable, initialTyped, placeChars, prevTypeable } from './cells.js';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { deleteBack, firstTypeable, placeChars, prevTypeable, restoreTyped, resumeCursor } from './cells.js';
+import { isHomophone, loadPinyin, onPinyinReady } from './homophone.js';
 
 /**
  * 중국어 한 줄. [병음 · 한글 발음 · 田字格 칸 · 해석] 한 세트다.
@@ -11,9 +12,9 @@ import { deleteBack, firstTypeable, initialTyped, placeChars, prevTypeable } fro
  *
  * 칸을 채우는 규칙 자체는 cells.js의 순수 함수에 있다(테스트용).
  */
-export default function TypingLine({ cells, gloss }) {
-  const [typed, setTyped] = useState(() => initialTyped(cells));
-  const [cursor, setCursor] = useState(() => firstTypeable(cells, 0));
+export default function TypingLine({ cells, gloss, initial, onChange }) {
+  const [typed, setTyped] = useState(() => restoreTyped(cells, initial));
+  const [cursor, setCursor] = useState(() => resumeCursor(cells, restoreTyped(cells, initial)));
   const [composing, setComposing] = useState('');
   const [focused, setFocused] = useState(false);
   const [box, setBox] = useState(null);
@@ -30,12 +31,16 @@ export default function TypingLine({ cells, gloss }) {
   // compositionend 바로 뒤에 브라우저가 같은 글자로 input을 한 번 더 보내는 걸 걸러낸다.
   const echoRef = useRef(false);
 
-  const apply = useCallback(({ typed: nextTyped, cursor: nextCursor }) => {
-    typedRef.current = nextTyped;
-    cursorRef.current = nextCursor;
-    setTyped(nextTyped);
-    setCursor(nextCursor);
-  }, []);
+  const apply = useCallback(
+    ({ typed: nextTyped, cursor: nextCursor }) => {
+      typedRef.current = nextTyped;
+      cursorRef.current = nextCursor;
+      setTyped(nextTyped);
+      setCursor(nextCursor);
+      onChange?.(nextTyped);
+    },
+    [onChange],
+  );
 
   const moveTo = useCallback(
     (at) => {
@@ -58,6 +63,13 @@ export default function TypingLine({ cells, gloss }) {
   const backspace = useCallback(() => {
     apply(deleteBack(cells, typedRef.current, cursorRef.current));
   }, [apply, cells]);
+
+  // 동음이의어 사전은 따로 떼어 늦게 온다. 도착하면 한 번 다시 그려서 표시를 채운다.
+  const [, bumpPinyin] = useState(0);
+  useEffect(() => {
+    loadPinyin();
+    return onPinyinReady(() => bumpPinyin((n) => n + 1));
+  }, []);
 
   // 숨긴 input을 지금 칸 위로 옮긴다. IME 후보창 위치가 여기서 결정된다.
   useLayoutEffect(() => {
@@ -172,6 +184,10 @@ export default function TypingLine({ cells, gloss }) {
             }}
           >
             <span className="cell-char">{typed[i]}</span>
+            {/* 채점은 안 한다. 소리가 같아서 혼자서는 못 알아차리는 글자만 점으로 알려 준다. */}
+            {!cell.locked && isHomophone(typed[i], cell.ch) ? (
+              <span className="cell-homophone" title={`${cell.ch}과 소리가 같다`} />
+            ) : null}
             {!cell.locked && i === cursor && composing ? (
               <span className="cell-composing">{composing}</span>
             ) : null}

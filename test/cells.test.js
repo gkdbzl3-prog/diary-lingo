@@ -115,3 +115,25 @@ test('문장부호로만 된 줄은 넣을 칸이 없다', () => {
   const r = placeChars(cells, initialTyped(cells), 0, '了');
   assert.deepEqual(r.typed, ['…', '…']);
 });
+
+test('임시저장한 값을 되살리고, 이어서 칠 자리를 찾는다', async (t) => {
+  const { restoreTyped, resumeCursor } = await import('../web/src/zh/cells.js');
+  const cells = lineToCells(line);
+
+  const typed = restoreTyped(cells, ['最', '近', '，', '2', '', '', '']);
+  assert.deepEqual(typed, ['最', '近', '，', '2', '', '', '']);
+  assert.equal(resumeCursor(cells, typed), 4, '비어 있는 첫 입력 칸');
+
+  // 저장된 게 없으면 처음부터
+  const empty = restoreTyped(cells, undefined);
+  assert.deepEqual(empty, initialTyped(cells));
+  assert.equal(resumeCursor(cells, empty), 0);
+
+  // 잠긴 칸은 저장값이 뭐든 원래 글자를 지킨다
+  const tampered = restoreTyped(cells, ['最', '近', '엑', '', '', '', '']);
+  assert.equal(tampered[2], '，');
+
+  // 다 채웠으면 줄 끝
+  const full = restoreTyped(cells, ['最', '近', '，', '2', '0', '2', '3']);
+  assert.equal(resumeCursor(cells, full), 7);
+});

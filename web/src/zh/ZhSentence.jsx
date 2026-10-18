@@ -9,7 +9,7 @@ import { lineToCells } from './cells.js';
  * 딱 들어가도록 칸 크기를 container query 단위로 계산해서, 좁은 화면에서는
  * 카드 전체가 비율대로 줄어든다.
  */
-export default function ZhSentence({ sentence, ko }) {
+export default function ZhSentence({ sentence, ko, saved, onChange }) {
   const lines = useMemo(() => (sentence.lines ?? []).map(lineToCells), [sentence]);
   const maxCells = Math.max(1, ...lines.map((cells) => cells.length));
 
@@ -22,7 +22,13 @@ export default function ZhSentence({ sentence, ko }) {
 
       <div className="lines">
         {lines.map((cells, i) => (
-          <TypingLine key={i} cells={cells} gloss={sentence.lines[i].gloss} />
+          <TypingLine
+            key={i}
+            cells={cells}
+            gloss={sentence.lines[i].gloss}
+            initial={saved?.(sentence.id, i)}
+            onChange={(value) => onChange?.(sentence.id, i, value)}
+          />
         ))}
       </div>
     </section>

@@ -63,3 +63,15 @@ export function writeDiary(doc) {
   fs.writeFileSync(fileOf(doc.id), `${JSON.stringify(doc, null, 2)}\n`);
   return doc;
 }
+
+/**
+ * 타이핑 중인 내용을 임시저장한다. 번역 결과는 건드리지 않는다.
+ * typing[lang][sid][줄 번호] = zh는 칸마다 글자 배열, ja·en은 줄 문자열.
+ */
+export function saveTyping(id, lang, typing) {
+  const doc = readDiary(id);
+  doc.typing = doc.typing ?? {};
+  doc.typing[lang] = typing;
+  doc.typingUpdatedAt = new Date().toISOString();
+  return writeDiary(doc);
+}

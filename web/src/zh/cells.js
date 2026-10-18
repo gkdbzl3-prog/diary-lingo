@@ -78,3 +78,21 @@ export function deleteBack(cells, typed, cursor) {
   next[at] = '';
   return { typed: next, cursor: at };
 }
+
+/** 임시저장한 값을 칸에 되살린다. 잠긴 칸은 원래 글자를 지킨다. */
+export function restoreTyped(cells, saved) {
+  const base = initialTyped(cells);
+  if (!Array.isArray(saved)) return base;
+  return base.map((v, i) => {
+    if (cells[i].locked) return v;
+    return typeof saved[i] === 'string' ? saved[i] : '';
+  });
+}
+
+/** 이어서 칠 자리. 비어 있는 첫 입력 칸이다. */
+export function resumeCursor(cells, typed) {
+  for (let i = 0; i < cells.length; i += 1) {
+    if (!cells[i].locked && !typed[i]) return i;
+  }
+  return cells.length;
+}
