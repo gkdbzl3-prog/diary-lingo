@@ -1,0 +1,14 @@
+{
+  "name": "diary-lingo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "한국어 일기를 외국어 학습 자료로 바꿔 주는 개인용 도구",
+  "scripts": {
+    "translate": "node --env-file-if-exists=.env src/cli.js",
+    "split": "node src/split.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0"
+  }
+}
