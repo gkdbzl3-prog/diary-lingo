@@ -13,7 +13,7 @@
 ## 스택
 
 - Node.js + pnpm
-- AI: Anthropic Claude API (`@anthropic-ai/sdk`), 기본 모델 `claude-sonnet-5-5`. 모델명은 설정으로 바꿀 수 있게 둔다.
+- AI: Anthropic Claude API (`@anthropic-ai/sdk`), 기본 모델 `claude-opus-5-5`. 모델명은 설정으로 바꿀 수 있게 둔다.
 - API 키는 `.env`의 `ANTHROPIC_API_KEY`. 서버에서만 쓰고 프론트에 절대 노출하지 않는다. `.env`는 `.gitignore`에 넣는다.
 - 서버: Express (3단계부터)
 - 프론트: React + Vite (3단계부터)
@@ -169,6 +169,8 @@ ja
 1. 병음 (흐릿, 칸마다 정렬)
 2. 한글 발음 (흐릿, 칸마다 정렬)
 3. 한자 칸: 田字格 느낌, 다른 줄보다 크게, 비어 있음. 한 글자에 한 칸이고, 문장부호는 미리 채워 두고 커서가 건너뛴다.
+   - 숫자도 한 글자에 한 칸이다. `2023` 은 네 칸이고 병음·발음도 칸마다 하나씩 붙는다(èr líng èr sān / 얼 링 얼 싼).
+     아랍 숫자를 그대로 쓰므로 미리 채워 두지 않고 유저가 타이핑한다.
 4. 해석 (gloss, 선명하게)
 
 ### 일본어: 줄마다

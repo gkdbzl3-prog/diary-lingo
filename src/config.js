@@ -2,7 +2,7 @@
 
 export const config = {
   // 모델은 환경변수로 덮어쓸 수 있다.
-  model: process.env.DIARY_LINGO_MODEL ?? 'claude-sonnet-5-5',
+  model: process.env.DIARY_LINGO_MODEL ?? 'claude-opus-5-5',
 
   // 생각 깊이. low | medium | high | xhigh | max
   effort: process.env.DIARY_LINGO_EFFORT ?? 'high',
