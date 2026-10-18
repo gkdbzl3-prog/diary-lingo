@@ -11,6 +11,9 @@ const LABEL = { zh: '중국어', ja: '일본어', en: '영어' };
 const ORDER = ['zh', 'ja', 'en'];
 const SENTENCE = { zh: ZhSentence, ja: JaSentence, en: EnSentence };
 
+/** 드롭다운이 너비를 다 먹으면 옆 버튼이 아래로 밀린다. 제목을 줄여서 띄운다. */
+const short = (t) => (t && t.length > 22 ? `${t.slice(0, 22)}…` : (t ?? ''));
+
 const clock = (iso) => {
   if (!iso) return '';
   const d = new Date(iso);
@@ -174,17 +177,17 @@ export default function App() {
   return (
     <main className="app" ref={topRef}>
       <header className="app-head">
-        <h1>diary-lingo</h1>
+        <h1>Diary-lingo</h1>
         <select value={doc?.id ?? ''} onChange={(e) => open(e.target.value)}>
           <option value="">새 일기</option>
           {diaries.map((d) => (
             <option key={d.id} value={d.id}>
-              {d.id} · {d.title}
+              {d.id} · {short(d.title)}
             </option>
           ))}
         </select>
         {doc ? (
-          <>
+          <div className="head-actions">
             <button type="button" className="tab" onClick={newDiary}>
               새 일기
             </button>
@@ -206,7 +209,7 @@ export default function App() {
                 취소
               </button>
             ) : null}
-          </>
+          </div>
         ) : null}
       </header>
 
@@ -278,9 +281,7 @@ export default function App() {
             <button type="button" className="save" onClick={save} disabled={saving || !store.dirty}>
               {saving ? '저장 중…' : '임시저장'}
             </button>
-            <span className="save-state">
-              {store.dirty ? '저장 안 된 변경' : store.savedAt ? `${clock(store.savedAt)} 저장됨` : ''}
-            </span>
+            <span className="save-state">{store.savedAt ? `${clock(store.savedAt)} 저장됨` : ''}</span>
           </div>
         </div>
       ) : null}

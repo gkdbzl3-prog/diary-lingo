@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { TYPING_INPUT, focusNextInput } from '../focusNext.js';
+import { lineState } from '../lineState.js';
 
 /**
  * 영어 한 줄. [한글 발음 · 해석 · 고스트 텍스트 위에 타이핑]
@@ -18,7 +19,7 @@ function EnLine({ line, initial, onChange }) {
   };
 
   return (
-    <div className="line">
+    <div className={`line ${lineState(value.trim().length, (line.text ?? '').length)}`}>
       <p className="en-pron">{line.pron}</p>
       <p className="line-gloss">{line.gloss}</p>
 

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import { deleteBack, firstTypeable, placeChars, prevTypeable, restoreTyped, resumeCursor } from './cells.js';
 import { isHomophone, loadPinyin, onPinyinReady } from './homophone.js';
 import { TYPING_INPUT, focusNextInput } from '../focusNext.js';
+import { lineState } from '../lineState.js';
 
 /**
  * 중국어 한 줄. [병음 · 한글 발음 · 田字格 칸 · 해석] 한 세트다.
@@ -150,8 +151,12 @@ export default function TypingLine({ cells, gloss, initial, onChange }) {
 
   const placed = focused && box;
 
+  // 한 구절을 마무리했는지. 규칙은 lineState에 있다(채점이 아니다).
+  const typeable = cells.reduce((n, c) => (c.locked ? n : n + 1), 0);
+  const filled = cells.reduce((n, c, i) => (!c.locked && typed[i] ? n + 1 : n), 0);
+
   return (
-    <div className="line">
+    <div className={`line ${lineState(filled, typeable)}`}>
       <div className="line-row line-py">
         {cells.map((cell, i) => (
           <span className="cell-label" key={i}>

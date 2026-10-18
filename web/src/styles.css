@@ -9,6 +9,7 @@
   --card: #ffffff;
   --line: #e8e3d7;
   --group: #f4f1e9;
+  --ok: #3f7d4e;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,6 +24,7 @@
     --card: #1f1e1b;
     --line: #2c2a26;
     --group: #262420;
+    --ok: #6cc08a;
   }
 }
 
@@ -55,6 +57,22 @@ body {
   font-size: 18px;
   margin: 0;
   letter-spacing: 0.02em;
+}
+
+.app-head select {
+  /* 길면 줄어들되 너무 좁아지지는 않게. 이게 없으면 옆 버튼이 아래로 밀린다. */
+  flex: 1 1 200px;
+  min-width: 0;
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.head-actions {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
 }
 
 .app-head select,
@@ -412,13 +430,11 @@ body {
   /* 왼쪽 선(2px)과 padding을 합쳐 0이 되게 음수 margin을 줘서 글자가 밀리지 않는다 */
   margin: 0 -12px;
   padding: 9px 12px 9px 10px;
-  border-left: 2px solid transparent;
   border-radius: 0 8px 8px 0;
 }
 
 .lines-text .line:focus-within {
   background: var(--group);
-  border-left-color: var(--accent);
 }
 
 .ja-input,
@@ -566,4 +582,29 @@ body {
   margin-top: 28px;
   padding-top: 20px;
   border-top: 1px solid var(--line);
+}
+
+
+/* ── 구절 진행 표시 ──────────────────────────────────────
+   채점이 아니다. 맞았는지는 보지 않고 **칸(또는 글자 수)이 찼는지**만 본다.
+   아직 안 친 줄은 선이 없고, 치는 중이면 빨강, 그 구절을 마무리하면 초록이다.
+   하나라도 지우면 다시 빨강으로 돌아온다. */
+
+.line {
+  border-left: 2px solid transparent;
+}
+
+/* 중국어는 칸 너비를 cqi로 계산하므로 padding을 주면 칸이 넘친다.
+   선 두께와 여백만큼 음수 margin으로 당겨서 칸 위치를 그대로 둔다. */
+.lines:not(.lines-text) .line {
+  margin-left: -8px;
+  padding-left: 6px;
+}
+
+.line-partial {
+  border-left-color: var(--accent);
+}
+
+.line-done {
+  border-left-color: var(--ok);
 }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { hasWrongKanji } from './kanji.js';
 import { TYPING_INPUT, focusNextInput } from '../focusNext.js';
+import { lineState } from '../lineState.js';
 
 /**
  * 일본어 한 줄. [요미가나 · 한글 발음 · 해석 · 한 줄 입력]
@@ -24,7 +25,7 @@ function JaLine({ line, initial, onChange }) {
   };
 
   return (
-    <div className="line">
+    <div className={`line ${lineState(value.trim().length, want.length)}`}>
       <p className="ja-kana">{tokens.map((t) => t.kana ?? '').join('')}</p>
       <p className="ja-pron">{tokens.map((t) => t.pron ?? '').join(' ')}</p>
       <p className="line-gloss">{line.gloss}</p>
