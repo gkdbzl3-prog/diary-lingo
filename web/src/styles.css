@@ -1,0 +1,322 @@
+:root {
+  --bg: #fbfaf7;
+  --fg: #1c1a17;
+  --muted: #8a8578;
+  --faint: #b6b1a4;
+  --grid: #d6d1c4;
+  --grid-dash: #e2ddd0;
+  --accent: #b4552d;
+  --card: #ffffff;
+  --line: #e8e3d7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #171614;
+    --fg: #ece8e0;
+    --muted: #8d887d;
+    --faint: #6a655c;
+    --grid: #3a3733;
+    --grid-dash: #2f2c28;
+    --accent: #e08457;
+    --card: #1f1e1b;
+    --line: #2c2a26;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, 'Noto Sans KR', sans-serif;
+  line-height: 1.5;
+}
+
+.app {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px 96px;
+}
+
+.app-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.app-head h1 {
+  font-size: 18px;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.app-head select,
+.new-diary textarea,
+.new-diary button {
+  font: inherit;
+  color: inherit;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.new-diary {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  margin: 16px 0 8px;
+}
+
+.new-diary textarea {
+  flex: 1;
+  resize: vertical;
+  font-size: 14px;
+}
+
+.new-diary button {
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.new-diary button:disabled {
+  color: var(--faint);
+  cursor: default;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 8px 0 20px;
+}
+
+.error {
+  color: var(--accent);
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+/* ── 문장 카드 ───────────────────────────────────────────────
+   카드가 container다. 문장 안에서 가장 긴 줄이 딱 들어가도록 칸 크기를
+   cqi로 계산하고, 글자 크기를 모두 칸 크기에서 끌어낸다. 그래서 화면이
+   좁아지면 카드 전체가 비율대로 줄어들고 줄바꿈 위치는 그대로다. */
+
+.sentence {
+  container-type: inline-size;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.sentence-head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 14px;
+}
+
+.sentence-id {
+  color: var(--faint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sentence-ko {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.lines {
+  --cell-max: 54px;
+  --cell: min(var(--cell-max), calc((100cqi - 2px) / var(--max-cells)));
+
+  display: flex;
+  flex-direction: column;
+
+  /* 줄 세트 사이 간격. 세트 안의 행 간격(아래 .line의 gap)보다 넉넉히 넓게
+     둬서 어느 병음·발음이 어느 칸 줄 몫인지 헷갈리지 않게 한다. */
+  gap: calc(var(--cell) * 0.6);
+}
+
+.line {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.line-row {
+  display: flex;
+}
+
+.line-row > * {
+  flex: 0 0 var(--cell);
+  width: var(--cell);
+  text-align: center;
+}
+
+/* 병음과 한글 발음은 흐릿하게, 칸마다 정렬 */
+.cell-label {
+  color: var(--muted);
+  overflow: hidden;
+  white-space: nowrap;
+  line-height: 1.25;
+}
+
+.line-py .cell-label {
+  font-size: calc(var(--cell) * 0.26);
+}
+
+.line-pron .cell-label {
+  font-size: calc(var(--cell) * 0.25);
+  color: var(--faint);
+}
+
+/* 田字格: 네모 칸 + 가운데 점선 십자 */
+.line-boxes {
+  position: relative;
+  margin-top: calc(var(--cell) * 0.06);
+}
+
+.cell {
+  height: var(--cell);
+  padding: 0;
+  border: 1px solid var(--grid);
+  background-color: transparent;
+  background-image:
+    repeating-linear-gradient(to right, var(--grid-dash) 0 4px, transparent 4px 8px),
+    repeating-linear-gradient(to bottom, var(--grid-dash) 0 4px, transparent 4px 8px);
+  background-size: 100% 1px, 1px 100%;
+  background-position: center center;
+  background-repeat: no-repeat;
+  position: relative;
+  display: grid;
+  place-items: center;
+  font: inherit;
+  color: inherit;
+  cursor: text;
+}
+
+.cell + .cell {
+  margin-left: -1px;
+}
+
+.cell-char {
+  font-size: calc(var(--cell) * 0.66);
+  line-height: 1;
+}
+
+/* 문장부호 칸은 미리 채워 두고 커서가 건너뛴다 */
+.cell-locked {
+  background-image: none;
+  border-color: transparent;
+  color: var(--muted);
+  cursor: default;
+}
+
+.cell-active {
+  border-color: var(--accent);
+  z-index: 1;
+}
+
+/* 조합 중인 문자열(jintian…)을 지금 칸에 작게 미리 보여 준다 */
+.cell-composing {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 2px;
+  font-size: calc(var(--cell) * 0.2);
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* 보이지 않는 input 하나. 지금 칸 위로 옮겨 두어 IME 후보창이 칸 근처에 뜬다. */
+.line-input {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font-size: calc(var(--cell) * 0.66);
+  text-align: center;
+  z-index: 2;
+}
+
+/* 해석은 선명하게 */
+.line-gloss {
+  margin: calc(var(--cell) * 0.1) 0 0;
+  font-size: calc(var(--cell) * 0.3);
+  line-height: 1.4;
+}
+
+/* ── notes ─────────────────────────────────────────────── */
+
+.notes {
+  margin-top: 36px;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+}
+
+.notes h2 {
+  font-size: 14px;
+  margin: 20px 0 8px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.vocab {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+
+.vocab th,
+.vocab td {
+  text-align: left;
+  vertical-align: baseline;
+  padding: 5px 8px 5px 0;
+  border-bottom: 1px solid var(--line);
+  font-weight: inherit;
+}
+
+.vocab th {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.vocab-reading {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.vocab-sid {
+  color: var(--faint);
+  font-size: 12px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.highlights {
+  margin: 0;
+  font-size: 13px;
+}
+
+.highlights dt {
+  font-weight: 600;
+  margin-top: 12px;
+}
+
+.highlights dd {
+  margin: 2px 0 0;
+  color: var(--muted);
+}
