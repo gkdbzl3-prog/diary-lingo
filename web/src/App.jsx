@@ -31,6 +31,8 @@ export default function App() {
   const [error, setError] = useState('');
   // 삭제는 되돌릴 수 없다. 한 번 더 눌러야 지워진다.
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // 저장 직후 잠깐만 버튼 글자가 "저장됨"이 된다. 자리를 따로 먹지 않게.
+  const [justSaved, setJustSaved] = useState(false);
 
   const store = useTypingStore();
   const topRef = useRef(null);
@@ -130,12 +132,24 @@ export default function App() {
     try {
       const result = await saveTyping(doc.id, lang, store.snapshot(lang));
       store.markSaved(result.typingUpdatedAt);
+      setJustSaved(true);
     } catch (err) {
       setError(err.message);
     } finally {
       setSaving(false);
     }
   }, [doc, lang, saving, store]);
+
+  useEffect(() => {
+    if (!justSaved) return undefined;
+    const timer = setTimeout(() => setJustSaved(false), 2500);
+    return () => clearTimeout(timer);
+  }, [justSaved]);
+
+  // 다시 치기 시작하면 바로 "임시저장"으로 돌아온다
+  useEffect(() => {
+    if (store.dirty) setJustSaved(false);
+  }, [store.dirty]);
 
   // Ctrl+S / Cmd+S 로도 임시저장
   useEffect(() => {
@@ -278,10 +292,15 @@ export default function App() {
             <button type="button" className="tab" onClick={() => setShowFull((v) => !v)}>
               {showFull ? '연습으로' : '전체 보기'}
             </button>
-            <button type="button" className="save" onClick={save} disabled={saving || !store.dirty}>
-              {saving ? '저장 중…' : '임시저장'}
+            <button
+              type="button"
+              className={justSaved ? 'save save-done' : 'save'}
+              onClick={save}
+              disabled={saving || !store.dirty}
+              title={store.savedAt ? `마지막 저장 ${clock(store.savedAt)}` : ''}
+            >
+              {saving ? '저장 중…' : justSaved ? '저장됨' : '임시저장'}
             </button>
-            <span className="save-state">{store.savedAt ? `${clock(store.savedAt)} 저장됨` : ''}</span>
           </div>
         </div>
       ) : null}

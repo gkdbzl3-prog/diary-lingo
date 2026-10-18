@@ -10,6 +10,8 @@
   --line: #e8e3d7;
   --group: #f4f1e9;
   --ok: #3f7d4e;
+  --progress: #9c9489;
+  --active: #4a7aa8;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -25,6 +27,8 @@
     --line: #2c2a26;
     --group: #262420;
     --ok: #6cc08a;
+    --progress: #857f74;
+    --active: #7eb0e0;
   }
 }
 
@@ -241,18 +245,20 @@ body {
   cursor: default;
 }
 
+/* 지금 칠 칸. 빨강이 아니라 파랑이다 — 커서일 뿐 틀렸다는 뜻이 아니다. */
 .cell-active {
-  border-color: var(--accent);
+  border-color: var(--active);
   z-index: 1;
 }
 
-/* 조합 중인 문자열(jintian…)을 지금 칸에 작게 미리 보여 준다 */
+/* 조합 중인 문자열(jintian…)을 지금 칸에 작게 미리 보여 준다.
+   지금 치고 있다는 표시이므로 커서와 같은 파랑을 쓴다. */
 .cell-composing {
   position: absolute;
   inset-inline: 0;
   bottom: 2px;
   font-size: calc(var(--cell) * 0.2);
-  color: var(--accent);
+  color: var(--active);
   white-space: nowrap;
   overflow: hidden;
 }
@@ -277,6 +283,13 @@ body {
   margin: calc(var(--cell) * 0.1) 0 0;
   font-size: calc(var(--cell) * 0.3);
   line-height: 1.4;
+}
+
+/* 중국어는 한자 줄이 칸 너비만큼 넓은데 한국어 해석은 짧아서 길이가 많이 다르다.
+   자간을 조금 벌려 차이를 줄인다. 일본어·영어는 칸이 없어 해당 없다. */
+.lines:not(.lines-text) .line-gloss {
+  letter-spacing: 0.08em;
+  word-spacing: 0.08em;
 }
 
 /* ── notes ─────────────────────────────────────────────── */
@@ -394,10 +407,10 @@ body {
   cursor: default;
 }
 
-.save-state {
-  font-size: 12px;
-  color: var(--muted);
-  min-width: 7em;
+/* 저장 직후 잠깐. 꺼진 버튼이라도 방금 저장됐다는 건 보이게 한다. */
+.save.save-done:disabled {
+  color: var(--ok);
+  border-color: var(--ok);
 }
 
 /* ── 중국어 동음이의어 표시 ─────────────────────────────
@@ -460,7 +473,7 @@ body {
 }
 
 .ja-input:focus {
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--active);
 }
 
 .line-warn {
@@ -483,7 +496,7 @@ body {
 }
 
 .en-field:focus-within {
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--active);
 }
 
 .en-ghost {
@@ -601,8 +614,10 @@ body {
   padding-left: 6px;
 }
 
+/* 치는 중. 빨강은 쓰지 않는다 — 삭제 버튼과 같은 색이라 틀렸다는 느낌이 든다.
+   차분한 회색이 "여기 치고 있다"로 읽히고, 다 치면 초록으로 바뀐다. */
 .line-partial {
-  border-left-color: var(--accent);
+  border-left-color: var(--progress);
 }
 
 .line-done {
