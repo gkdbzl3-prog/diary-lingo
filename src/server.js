@@ -3,6 +3,7 @@ import express from 'express';
 import { splitKoreanDiary } from './sentences.js';
 import { translate } from './translate.js';
 import { ask } from './qa.js';
+import { lookup } from './lookup.js';
 import { SUPPORTED } from './langs.js';
 import { config } from './config.js';
 import {
@@ -126,6 +127,39 @@ app.put('/api/diaries/:id/typing', (req, res) => {
 });
 
 /**
+ * 옆에 두는 작은 사전. 긁어 붙여 넣은 말의 뜻을 바로 돌려준다.
+ * 일기와 상관없이 쓸 수 있어서 일기 id를 받지 않는다.
+ * body: { lang, term }
+ */
+app.post('/api/lookup', async (req, res) => {
+  const lang = req.body?.lang;
+  const term = typeof req.body?.term === 'string' ? req.body.term.trim() : '';
+
+  if (!SUPPORTED.includes(lang)) {
+    res.status(400).json({ error: `모르는 언어: ${lang}` });
+    return;
+  }
+  if (term === '') {
+    res.status(400).json({ error: '찾을 말이 비어 있다' });
+    return;
+  }
+  if (term.length > 80) {
+    res.status(400).json({ error: '사전은 낱말이나 짧은 구만 찾는다 (80자까지)' });
+    return;
+  }
+  if (!process.env.ANTHROPIC_API_KEY) {
+    res.status(500).json({ error: 'ANTHROPIC_API_KEY가 없다' });
+    return;
+  }
+
+  try {
+    res.json(await lookup({ lang, term }));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
  * 하단 Q&A. 일기 원문과 해당 언어 번역을 맥락으로 넣고 한국어로 답을 받는다.
  * 지난 문답에 이어서 묻고, 문답은 일기에 함께 저장한다.
  * body: { lang, question }
@@ -160,23 +194,41 @@ app.post('/api/diaries/:id/qa', async (req, res) => {
   }
   const history = doc.qa?.[lang] ?? [];
 
+  // 답을 다 기다리면 10초 넘게 빈 화면이다. 글자가 오는 대로 흘려보낸다(SSE).
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
+
+  const emit = (payload) => res.write(`data: ${JSON.stringify(payload)}\n\n`);
+
   try {
-    const { text, usage, truncated } = await ask({ doc, lang, history, question });
+    const { text, usage, truncated } = await ask({
+      doc,
+      lang,
+      history,
+      question,
+      onDelta: (delta) => emit({ delta }),
+    });
+
     console.log(
       `[qa ${id} ${lang}] 입력 ${usage.input_tokens}` +
         ` / 캐시 쓰기 ${usage.cache_creation_input_tokens ?? 0}` +
         ` 읽기 ${usage.cache_read_input_tokens ?? 0}` +
         ` / 출력 ${usage.output_tokens}`,
     );
+
     const turns = [
       ...history,
       { role: 'user', text: question, at: new Date().toISOString() },
       { role: 'assistant', text, at: new Date().toISOString() },
     ];
     saveQa(id, lang, turns);
-    res.json({ turns, truncated });
+    emit({ done: true, turns, truncated });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    emit({ error: err.message });
+  } finally {
+    res.end();
   }
 });
 

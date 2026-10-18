@@ -33,13 +33,59 @@ export const retranslateDiary = (id, text, langs) =>
 export const deleteDiary = (id) =>
   fetch(`/api/diaries/${id}`, { method: 'DELETE' }).then(json);
 
-/** 하단 Q&A. 지난 문답에 이어서 묻는다. 답은 한국어로 온다. */
-export const askQa = (id, lang, question) =>
-  fetch(`/api/diaries/${id}/qa`, {
+/**
+ * 하단 Q&A. 지난 문답에 이어서 묻는다. 답은 한국어로 온다.
+ * 답을 다 기다리면 10초 넘게 빈 화면이라 글자가 오는 대로 받는다(SSE).
+ * @param {(text: string) => void} onDelta
+ * @returns {Promise<{turns: object[], truncated: boolean}>}
+ */
+export async function askQa(id, lang, question, onDelta) {
+  const res = await fetch(`/api/diaries/${id}/qa`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ lang, question }),
-  }).then(json);
+  });
+
+  // 스트림이 열리기 전에 막힌 경우(400·404 등)는 평범한 JSON으로 온다.
+  if (!res.ok || !res.body) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `${res.status} ${res.statusText}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let result = null;
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const chunks = buffer.split('\n\n');
+    buffer = chunks.pop() ?? '';
+
+    for (const chunk of chunks) {
+      const line = chunk.replace(/^data: /, '').trim();
+      if (line === '') continue;
+      const message = JSON.parse(line);
+      if (message.error) throw new Error(message.error);
+      if (message.delta) onDelta?.(message.delta);
+      else if (message.done) result = message;
+    }
+  }
+
+  if (!result) throw new Error('답이 중간에 끊겼다');
+  return result;
+}
 
 export const clearQa = (id, lang) =>
   fetch(`/api/diaries/${id}/qa?lang=${lang}`, { method: 'DELETE' }).then(json);
+
+/** 옆에 두는 작은 사전. 긁어 붙여 넣은 말의 뜻을 찾는다. */
+export const lookupTerm = (lang, term) =>
+  fetch('/api/lookup', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ lang, term }),
+  }).then(json);

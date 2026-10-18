@@ -21,6 +21,8 @@ ${config.learnerLevel}
 - 예문은 ${label}로 쓰고 바로 뒤에 한국어 뜻을 붙입니다.
 - 아래 자료의 문장을 가리킬 때는 #번호로 씁니다.
 - 자료에 없는 것을 물어도 아는 대로 답합니다. 다만 자료와 어긋나는 점이 있으면 짚어 줍니다.
+- **${label}에 대해서만 답합니다.** 묻지 않은 다른 언어(중국어·일본어·영어)를 끌어와
+  비교하거나 예로 들지 마세요. 한국어 원문을 가리키는 건 괜찮습니다.
 - 확실하지 않으면 확실하지 않다고 씁니다. 지어내지 마세요.
 - 마크다운은 목록과 굵게 정도만 씁니다. 표는 쓰지 마세요.`;
 }
@@ -68,8 +70,9 @@ export function buildContext({ doc, lang }) {
  * @param {'zh'|'ja'|'en'} args.lang
  * @param {{role:'user'|'assistant', text:string}[]} args.history 지난 문답
  * @param {string} args.question
+ * @param {(text: string) => void} [args.onDelta] 글자가 오는 대로 넘겨준다
  */
-export async function ask({ doc, lang, history, question }) {
+export async function ask({ doc, lang, history, question, onDelta }) {
   if (!LANGS[lang]) throw new Error(`모르는 언어: ${lang}`);
   if (!doc.langs?.[lang]) throw new Error(`이 일기에는 ${LANGS[lang].label} 번역이 없다`);
 
@@ -80,6 +83,7 @@ export async function ask({ doc, lang, history, question }) {
     system: buildSystemPrompt(lang),
     context: buildContext({ doc, lang }),
     turns,
+    onDelta,
   });
 
   return { text, usage, truncated };

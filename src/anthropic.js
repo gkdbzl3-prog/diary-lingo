@@ -25,22 +25,19 @@ export function getClient() {
  * @param {string} args.request 이번 묶음 요청
  * @param {object} args.schema 응답 JSON 스키마
  */
-export async function askForJson({ system, context, request, schema }) {
+export async function askForJson({ system, context, request, schema, model, effort, maxTokens }) {
+  // context는 선택이다. 사전처럼 맥락 없이 낱말만 묻는 경우도 있다.
+  const content = [];
+  if (context) content.push({ type: 'text', text: context, cache_control: { type: 'ephemeral' } });
+  content.push({ type: 'text', text: request });
+
   const params = {
-    model: config.model,
-    max_tokens: config.maxTokens,
+    model: model ?? config.model,
+    max_tokens: maxTokens ?? config.maxTokens,
     system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
-    messages: [
-      {
-        role: 'user',
-        content: [
-          { type: 'text', text: context, cache_control: { type: 'ephemeral' } },
-          { type: 'text', text: request },
-        ],
-      },
-    ],
+    messages: [{ role: 'user', content }],
     output_config: {
-      effort: config.effort,
+      effort: effort ?? config.effort,
       format: { type: 'json_schema', schema },
     },
   };
@@ -56,7 +53,7 @@ export async function askForJson({ system, context, request, schema }) {
     throw new Error(`모델이 요청을 거절했다: ${JSON.stringify(message.stop_details)}`);
   }
   if (message.stop_reason === 'max_tokens') {
-    throw new Error(`max_tokens(${config.maxTokens})에 걸려 응답이 잘렸다. 묶음을 줄여야 한다.`);
+    throw new Error(`max_tokens(${params.max_tokens})에 걸려 응답이 잘렸다. 묶음을 줄여야 한다.`);
   }
 
   let payload;
@@ -69,30 +66,32 @@ export async function askForJson({ system, context, request, schema }) {
   return { payload, usage: message.usage };
 }
 
-async function send(params, withFallback) {
+/**
+ * @param {object} params
+ * @param {boolean} withFallback
+ * @param {(text: string) => void} [onDelta] 글자가 오는 대로 넘겨준다(Q&A 스트리밍용)
+ */
+async function send(params, withFallback, onDelta) {
   const anthropic = getClient();
 
-  if (!withFallback) {
-    const stream = anthropic.messages.stream(params);
+  const run = (client, extra) => {
+    const stream = client.messages.stream({ ...params, ...extra });
+    if (onDelta) stream.on('text', onDelta);
     return stream.finalMessage();
-  }
+  };
+
+  if (!withFallback) return run(anthropic);
 
   // 안전 분류기 거절에 대비한 서버 측 폴백. 계정에서 베타가 막혀 있으면 끄고 재시도한다.
   try {
-    const stream = anthropic.beta.messages.stream({
-      ...params,
-      betas: [FALLBACK_BETA],
-      fallbacks: 'default',
-    });
-    return await stream.finalMessage();
+    return await run(anthropic.beta, { betas: [FALLBACK_BETA], fallbacks: 'default' });
   } catch (err) {
     if (err?.status === 400) {
       if (config.serverFallback) {
         console.warn(`  ! 서버 폴백 베타를 쓸 수 없어 끄고 다시 보낸다 (${err.message})`);
         config.serverFallback = false;
       }
-      const stream = anthropic.messages.stream(params);
-      return stream.finalMessage();
+      return run(anthropic);
     }
     throw err;
   }
@@ -109,8 +108,9 @@ async function send(params, withFallback) {
  * @param {string} args.system
  * @param {string} args.context 질문이 바뀌어도 글자 하나까지 같아야 한다
  * @param {{role: 'user'|'assistant', text: string}[]} args.turns 첫 항목은 user
+ * @param {(text: string) => void} [args.onDelta] 글자가 오는 대로 넘겨준다
  */
-export async function askText({ system, context, turns }) {
+export async function askText({ system, context, turns, onDelta }) {
   const messages = turns.map((turn, i) => {
     if (turn.role !== 'user') return { role: 'assistant', content: turn.text };
     if (i > 0) return { role: 'user', content: turn.text };
@@ -133,7 +133,7 @@ export async function askText({ system, context, turns }) {
     output_config: { effort: config.qaEffort },
   };
 
-  const message = await send(params, config.serverFallback);
+  const message = await send(params, config.serverFallback, onDelta);
 
   if (message.stop_reason === 'refusal') {
     throw new Error(`모델이 요청을 거절했다: ${JSON.stringify(message.stop_details)}`);

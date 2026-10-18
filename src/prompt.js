@@ -29,7 +29,7 @@ export function composeSystemPrompt({ lang, sections }) {
     `당신은 한국어 일기를 ${name} 학습 자료로 바꿔 주는 선생님입니다.`,
 
     `## 학습자
-${config.learnerLevel}`,
+${[config.learnerLevel, config.learnerLevelByLang?.[lang]].filter(Boolean).join('\n')}`,
 
     `## 할 일
 요청받은 한국어 문장을 ${target}로 번역하고, 따라 쓰기 연습용으로 줄을 나눠 ${sections.attach} 붙입니다.`,

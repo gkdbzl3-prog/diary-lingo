@@ -35,20 +35,33 @@ export default function Qa({ diaryId, lang, label, initialTurns }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
+  // 오는 대로 쌓이는 답. 다 오면 turns에 들어가고 비워진다.
+  const [streaming, setStreaming] = useState('');
 
   const send = async (e) => {
     e?.preventDefault();
     if (busy || question.trim() === '') return;
+    const asked = question.trim();
     setBusy(true);
     setError('');
+    setStreaming('');
+    setQuestion('');
+    // 보낸 질문을 바로 올려 둔다. 답은 글자가 오는 대로 그 아래에 쌓인다.
+    setTurns((prev) => [...prev, { role: 'user', text: asked }]);
+
     try {
-      const result = await askQa(diaryId, lang, question.trim());
+      const result = await askQa(diaryId, lang, asked, (delta) =>
+        setStreaming((prev) => prev + delta),
+      );
       setTurns(result.turns);
-      setQuestion('');
       if (result.truncated) setError('답이 길어서 잘렸다. 더 좁혀서 물어보면 좋다.');
     } catch (err) {
       setError(err.message);
+      // 답을 못 받았으니 올려 뒀던 질문을 되돌린다.
+      setTurns((prev) => prev.slice(0, -1));
+      setQuestion(asked);
     } finally {
+      setStreaming('');
       setBusy(false);
     }
   };
@@ -108,7 +121,13 @@ export default function Qa({ diaryId, lang, label, initialTurns }) {
             </div>
           ),
         )}
-        {busy ? <p className="hint">생각 중…</p> : null}
+        {streaming ? (
+          <div className="qa-a">
+            <Answer text={streaming} />
+          </div>
+        ) : busy ? (
+          <p className="hint">생각 중…</p>
+        ) : null}
       </div>
 
       {error ? <p className="error">{error}</p> : null}
@@ -118,9 +137,14 @@ export default function Qa({ diaryId, lang, label, initialTurns }) {
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           rows={2}
-          placeholder={`예) #3의 了는 왜 붙었나? / 이 표현을 더 자연스럽게 바꾸면?`}
+          placeholder={'예) #3의 了는 왜 붙었나?  (엔터로 묻기, Shift+엔터로 줄바꿈)'}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) send(e);
+            if (e.key !== 'Enter') return;
+            // 한자·가나 변환 중의 엔터는 IME가 가져간다. 건드리면 안 된다.
+            if (e.nativeEvent.isComposing) return;
+            if (e.shiftKey) return; // 줄바꿈
+            e.preventDefault();
+            send(e);
           }}
         />
         <button type="submit" disabled={busy || question.trim() === ''}>

@@ -7,6 +7,7 @@ import EnSentence from './en/EnSentence.jsx';
 import FullText from './FullText.jsx';
 import Notes from './Notes.jsx';
 import Qa from './Qa.jsx';
+import Dictionary from './Dictionary.jsx';
 
 const LABEL = { zh: '중국어', ja: '일본어', en: '영어' };
 const ORDER = ['zh', 'ja', 'en'];
@@ -343,6 +344,8 @@ export default function App() {
           initialTurns={doc.qa?.[lang] ?? []}
         />
       ) : null}
+
+      {current ? <Dictionary key={lang} lang={lang} label={LABEL[lang]} /> : null}
 
       {doc ? (
         <footer className="app-foot">
