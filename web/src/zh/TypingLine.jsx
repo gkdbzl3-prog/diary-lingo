@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { deleteBack, firstTypeable, placeChars, prevTypeable, restoreTyped, resumeCursor } from './cells.js';
 import { isHomophone, loadPinyin, onPinyinReady } from './homophone.js';
+import { TYPING_INPUT, focusNextInput } from '../focusNext.js';
 
 /**
  * 중국어 한 줄. [병음 · 한글 발음 · 田字格 칸 · 해석] 한 세트다.
@@ -130,6 +131,11 @@ export default function TypingLine({ cells, gloss, initial, onChange }) {
       backspace();
       return;
     }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      focusNextInput(e.currentTarget);
+      return;
+    }
     if (e.key === 'ArrowLeft') {
       e.preventDefault();
       const at = prevTypeable(cells, cursorRef.current);
@@ -208,6 +214,7 @@ export default function TypingLine({ cells, gloss, initial, onChange }) {
           autoCapitalize="off"
           spellCheck={false}
           lang="zh-CN"
+          {...TYPING_INPUT}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           onInput={onInput}

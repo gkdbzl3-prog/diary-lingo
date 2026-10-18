@@ -20,3 +20,11 @@ export const saveTyping = (id, lang, typing) =>
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ lang, typing }),
   }).then(json);
+
+/** 원문을 고쳐 다시 번역한다. id는 그대로 두고 타이핑한 내용은 버린다. */
+export const retranslateDiary = (id, text, langs) =>
+  fetch(`/api/diaries/${id}`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ text, langs }),
+  }).then(json);

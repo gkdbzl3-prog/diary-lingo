@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { TYPING_INPUT, focusNextInput } from '../focusNext.js';
 
 /**
  * 영어 한 줄. [한글 발음 · 고스트 텍스트 위에 타이핑 · 해석]
@@ -26,7 +27,13 @@ function EnLine({ line, initial, onChange }) {
           className="en-input"
           value={value}
           onChange={(e) => change(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+            e.preventDefault();
+            focusNextInput(e.currentTarget);
+          }}
           lang="en"
+          {...TYPING_INPUT}
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"

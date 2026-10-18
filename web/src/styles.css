@@ -400,23 +400,6 @@ body {
   gap: 22px;
 }
 
-.ja-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 0.7em;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.ja-kana {
-  color: var(--muted);
-}
-
-.ja-pron {
-  color: var(--faint);
-  font-size: 13px;
-}
-
 .ja-input,
 .en-input,
 .en-ghost {
@@ -510,4 +493,36 @@ body {
   color: var(--muted);
   font-size: 14px;
   line-height: 1.7;
+}
+
+/* 일본어: 요미가나는 붙여 쓰고, 해석을 입력란 위에 둔다 */
+.ja-kana,
+.ja-pron {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.ja-kana {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.ja-pron {
+  color: var(--faint);
+  font-size: 13px;
+}
+
+/* 해석이 입력란 위로 올라갔다. 이제 이게 "무엇을 쓸지"를 알려 주는 주인공이라
+   본문보다 조금 키운다. */
+.lines-text .line-gloss {
+  margin: 4px 0 0;
+  font-size: 15px;
+}
+
+.lines-text .ja-input {
+  margin-top: 6px;
+}
+
+.notes-back {
+  margin-bottom: 4px;
 }
