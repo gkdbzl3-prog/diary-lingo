@@ -80,7 +80,7 @@ export default function Dictionary({ lang, label }) {
             value={term}
             onChange={(e) => setTerm(e.target.value)}
             onPaste={onPaste}
-            placeholder="낱말을 붙여 넣으면 바로"
+            placeholder="모르는 단어를 적어보세요"
             autoComplete="off"
             spellCheck={false}
           />
