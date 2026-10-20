@@ -951,3 +951,35 @@ body {
     padding-right: 320px;
   }
 }
+
+/* 모바일에서는 손잡이가 본문을 많이 가린다(2026-10-20 날님 결정).
+   작고 얇게 줄이고, 조금 더 아래로 내리고, 반투명하게 둔다.
+   그래도 손잡이만 보이는 상태라 눈에 띄어야 하므로 누르는 동안과
+   열려 있는 동안은 선명하게 돌린다. */
+@media (max-width: 560px) {
+  .dict-toggle {
+    left: -24px;
+    top: 62%;
+    width: 24px;
+    height: 76px;
+    gap: 2px;
+    border-radius: 8px 0 0 8px;
+    box-shadow: -1px 0 4px rgb(0 0 0 / 6%);
+    opacity: 0.6;
+  }
+
+  .dict-toggle-arrow {
+    font-size: 15px;
+  }
+
+  .dict-toggle-label {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+  }
+
+  .dict-toggle:active,
+  .dict-toggle:focus-visible,
+  .dict-is-open .dict-toggle {
+    opacity: 1;
+  }
+}
