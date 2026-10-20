@@ -617,10 +617,92 @@ body {
 
 .app-foot {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
   margin-top: 28px;
   padding-top: 20px;
   border-top: 1px solid var(--line);
+}
+
+/* ── 기기 코드 ───────────────────────────────────────────
+   평소에 볼 일이 없다. 쿠키를 잃었을 때와 다른 기기에서 이어서 쓸 때만 쓰므로
+   접어 두고 작게 둔다. */
+.device {
+  width: 100%;
+  max-width: 420px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.device > summary {
+  cursor: pointer;
+  text-align: center;
+  list-style: none;
+}
+
+.device > summary::-webkit-details-marker {
+  display: none;
+}
+
+.device > summary::before {
+  content: '▸ ';
+}
+
+.device[open] > summary::before {
+  content: '▾ ';
+}
+
+.device-help {
+  margin: 10px 0;
+  line-height: 1.6;
+}
+
+.device-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.device-code {
+  flex: 1 1 auto;
+  overflow-x: auto;
+  padding: 6px 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: var(--fg);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.device-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 8px;
+  font: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--fg);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.device-row input:focus {
+  outline: none;
+  border-color: var(--active);
+}
+
+/* 버튼은 제 크기를 지킨다. 안 그러면 좁은 화면에서 입력란이 밀어 글자가 잘린다. */
+.device-row .tab {
+  flex: 0 0 auto;
+}
+
+.device-error {
+  margin: 8px 0 0;
+  color: var(--accent);
 }
 
 

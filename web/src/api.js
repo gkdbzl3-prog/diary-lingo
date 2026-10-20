@@ -89,3 +89,14 @@ export const lookupTerm = (lang, term) =>
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ lang, term }),
   }).then(json);
+
+/** 이 기기 코드. 쿠키가 HttpOnly라 화면은 서버에 물어본다. */
+export const getMe = () => fetch('/api/me').then(json);
+
+/** 다른 기기에서 쓰던 코드로 갈아탄다. 저장된 것이 있는 코드만 받는다. */
+export const switchDevice = (device) =>
+  fetch('/api/me', {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ device }),
+  }).then(json);

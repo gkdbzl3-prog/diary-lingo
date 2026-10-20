@@ -8,6 +8,7 @@ import FullText from './FullText.jsx';
 import Notes from './Notes.jsx';
 import Qa from './Qa.jsx';
 import Dictionary from './Dictionary.jsx';
+import Device from './Device.jsx';
 
 const LABEL = { zh: '중국어', ja: '일본어', en: '영어' };
 const ORDER = ['zh', 'ja', 'en'];
@@ -347,13 +348,14 @@ export default function App() {
 
       {current ? <Dictionary key={lang} lang={lang} label={LABEL[lang]} /> : null}
 
-      {doc ? (
-        <footer className="app-foot">
+      <footer className="app-foot">
+        {doc ? (
           <button type="button" className="tab" onClick={() => scrollTo(topRef)}>
             ↑ 맨 위로
           </button>
-        </footer>
-      ) : null}
+        ) : null}
+        <Device />
+      </footer>
     </main>
   );
 }

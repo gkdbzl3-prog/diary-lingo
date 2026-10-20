@@ -5,7 +5,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { SUPPORTED } from './langs.js';
-import { titleOf, writeDiary } from './store.js';
+import { storeFor, titleOf } from './store.js';
+import { isValidDevice } from './device.js';
+
+// 저장이 기기 코드 단위라 어느 기기 몫인지 알아야 한다.
+// 화면 맨 아래 "이 기기 코드"를 DIARY_LINGO_DEVICE에 넣고 돌린다.
+const DEVICE = process.env.DIARY_LINGO_DEVICE;
+if (!isValidDevice(DEVICE)) {
+  console.error('DIARY_LINGO_DEVICE에 기기 코드(32자리)를 넣어라. 화면 맨 아래에 있다.');
+  process.exit(1);
+}
+const store = storeFor(DEVICE);
 
 const OUT = process.argv[2] ?? 'out';
 
@@ -59,6 +69,6 @@ for (const [base, langs] of byBase) {
     doc.langs[lang] = { meta: d.meta ?? {}, sentences: d.sentences ?? [], notes: d.notes ?? { vocab: [], highlights: [] } };
   }
 
-  await writeDiary(doc);
-  console.log(`data/${base}.json ← ${[...langs.keys()].join(', ')} (문장 ${sentences.length}개)`);
+  await store.writeDiary(doc);
+  console.log(`${DEVICE}/${base} ← ${[...langs.keys()].join(', ')} (문장 ${sentences.length}개)`);
 }

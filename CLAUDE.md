@@ -333,19 +333,32 @@ ja
   - 답에 섞여 오는 마크다운은 굵게와 목록뿐이고 `web/src/markdown.js`가 직접 푼다
     (프롬프트에서 그 둘만 쓰라고 못 박았다. 라이브러리를 들이지 않는다).
 - [ ] **6단계: Firestore 저장, fly.io 배포** (저장은 끝, 배포는 fly 앱 만들기만 남음)
-  - 저장: `src/store.js`는 고르기만 한다. 자격증명이 있으면 Firestore, 없으면 `data/*.json`이다.
+  - **저장은 기기 코드 단위다.** 처음 들어오면 서버가 32자리 난수를 만들어 쿠키에 심고(10년),
+    일기는 전부 그 코드 밑에 저장된다. 남이 들어오면 다른 코드를 받아 빈 화면에서 시작하므로
+    서로의 일기가 보이지 않는다. 비밀번호도, 로그인도 없다. (`src/device.js`)
+    - 쿠키는 HttpOnly다. 화면은 `GET /api/me`로 코드를 받아 간다.
+    - **코드가 곧 열쇠다.** 코드를 아는 사람은 그 일기를 본다. 그래서 128비트 난수로 만든다.
+    - 폰과 노트북에서 같은 일기를 보려면 코드를 옮긴다(`PUT /api/me`, 화면 맨 아래 "이 기기 코드").
+      오타가 그대로 사고가 되므로 **저장된 것이 있는 코드만** 받는다.
+    - 쿠키를 잃으면 그 일기는 못 찾는다. 그래서 코드를 화면에 적어 두고 복사 버튼을 둔다.
+    - **번역은 서버의 API 키로 돌아간다.** 들어오는 사람 누구나 번역을 돌릴 수 있고 비용은
+      날님에게 온다(2026-10-20 날님이 제한을 안 두기로 정하셨다). 나중에 기기당 하루 횟수
+      제한을 둘 자리는 남겨 뒀다.
+  - 저장소 고르기: `src/store.js`는 고르기만 한다. 자격증명이 있으면 Firestore, 없으면 `data/<기기코드>/*.json`이다.
     키 없이도 `pnpm dev`와 테스트가 그대로 돌라고 이렇게 뒀다. `DIARY_LINGO_STORE`로 못 박을 수도 있다.
     - `FIREBASE_SERVICE_ACCOUNT` — 서비스 계정 JSON 통째로 (fly secret)
     - `GOOGLE_APPLICATION_CREDENTIALS` — 그 JSON 파일 경로 (로컬 `.env`)
     - 키 파일은 저장소에 두되 `.gitignore`가 막는다(`*firebase-adminsdk*.json`). **절대 커밋하지 말 것.**
   - **서버만 Firestore에 들어간다**(Admin SDK). 브라우저는 건드리지 않으므로 보안 규칙은 전부 잠가 둔다.
-  - 문서 나눔: `diaries/{id}`에 메타(제목·만든 때·문장 수·언어 목록·원문), 그 아래
+  - 문서 나눔: `users/{기기코드}/diaries/{id}`에 메타(제목·만든 때·문장 수·언어 목록·원문), 그 아래
     `langs/{lang}`·`typing/{lang}`·`qa/{lang}`. 한 일기를 한 문서에 담으면 1MiB 한도에 걸린다
     (11문장 3언어가 116KB다). 목록 화면은 메타만 읽는다.
   - 덩치 큰 값은 JSON 문자열 한 칸(`json`)에 담는다. **Firestore는 배열 안의 배열을 못 받고**,
     타이핑이 `[sid][줄][칸]`이라 바로 걸린다. 안을 질의할 일도 없다.
   - 저장소 함수는 전부 async다. `/api/health`가 `store`로 어느 쪽인지 알려 준다.
-  - `pnpm migrate-firestore` — `data/*.json`을 Firestore로 옮긴다(`--dry`로 미리 본다). 원본은 안 지운다.
+  - `pnpm migrate-firestore <기기코드>` — `data/*.json`을 그 기기 밑으로 옮긴다(`--dry`로 미리 본다).
+    `--from-legacy`는 기기 코드가 없던 때의 옛 루트 컬렉션 `diaries/`에서 가져오고, `--cleanup`은 그 옛 것을 지운다.
+    `pnpm import-out`도 `DIARY_LINGO_DEVICE`에 기기 코드를 받는다.
   - 배포: 푸시가 곧 배포다. `.github/workflows/deploy.yml`이 테스트·빌드 뒤 `flyctl deploy`를 돌린다.
     `FLY_API_TOKEN` 시크릿이 없으면 **실패시키지 않고** 건너뛴다(푸시마다 실패 알림이 울리면 괴롭다).
   - Dockerfile은 2단계다. Express가 API와 빌드한 프론트(`web/dist`)를 같이 서빙한다.

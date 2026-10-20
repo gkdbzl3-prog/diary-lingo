@@ -6,23 +6,21 @@ import { ask } from './qa.js';
 import { lookup } from './lookup.js';
 import { SUPPORTED } from './langs.js';
 import { config } from './config.js';
-import {
-  backend,
-  hasDiary,
-  listDiaries,
-  nextId,
-  readDiary,
-  removeDiary,
-  saveQa,
-  saveTyping,
-  titleOf,
-  writeDiary,
-} from './store.js';
+import { backend, storeFor, titleOf } from './store.js';
+import { device, isValidDevice, setDeviceCookie } from './device.js';
 
 const PORT = Number(process.env.PORT ?? 3000);
 const app = express();
 
 app.use(express.json({ limit: '1mb' }));
+
+// 기기 코드를 붙인다. 일기는 전부 이 코드 밑에 저장되고, 남은 다른 코드를 받는다.
+app.use(device);
+// 요청마다 제 기기 몫만 보는 저장소를 쥐여 준다.
+app.use((req, res, next) => {
+  req.store = storeFor(req.device);
+  next();
+});
 
 app.get('/api/health', (req, res) => {
   res.json({
@@ -34,27 +32,60 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+/**
+ * 이 기기 코드를 알려 준다. 쿠키가 HttpOnly라 화면은 이걸로 받아 간다.
+ * 코드를 잃으면 그 일기를 못 찾으므로 화면 맨 아래에 적어 둔다.
+ */
+app.get('/api/me', async (req, res) => {
+  res.json({ device: req.device, hasDiaries: await req.store.exists() });
+});
+
+/**
+ * 다른 기기에서 쓰던 코드로 갈아탄다. 폰과 노트북에서 같은 일기를 보려는 용도다.
+ * body: { device }
+ *
+ * 없는 코드로 갈아타면 빈 화면이 뜨고 쓰던 코드는 잃는다. 오타가 그대로 사고가 되므로
+ * 저장된 것이 있는 코드만 받는다.
+ */
+app.put('/api/me', async (req, res) => {
+  const wanted = String(req.body?.device ?? '').trim().toLowerCase();
+  if (!isValidDevice(wanted)) {
+    res.status(400).json({ error: '기기 코드는 32자리 영문 소문자와 숫자다' });
+    return;
+  }
+  if (wanted === req.device) {
+    res.json({ device: req.device, changed: false });
+    return;
+  }
+  if (!(await storeFor(wanted).exists())) {
+    res.status(404).json({ error: '그 코드로 저장된 일기가 없다. 코드를 다시 확인해라' });
+    return;
+  }
+  setDeviceCookie(req, res, wanted);
+  res.json({ device: wanted, changed: true });
+});
+
 app.get('/api/diaries', async (req, res) => {
-  res.json({ diaries: await listDiaries() });
+  res.json({ diaries: await req.store.listDiaries() });
 });
 
 app.get('/api/diaries/:id', async (req, res) => {
   const { id } = req.params;
-  if (!(await hasDiary(id))) {
+  if (!(await req.store.hasDiary(id))) {
     res.status(404).json({ error: `일기를 찾을 수 없다: ${id}` });
     return;
   }
-  res.json(await readDiary(id));
+  res.json(await req.store.readDiary(id));
 });
 
 app.delete('/api/diaries/:id', async (req, res) => {
   const { id } = req.params;
-  if (!(await hasDiary(id))) {
+  if (!(await req.store.hasDiary(id))) {
     res.status(404).json({ error: `일기를 찾을 수 없다: ${id}` });
     return;
   }
   try {
-    await removeDiary(id);
+    await req.store.removeDiary(id);
     res.json({ ok: true, id });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -111,7 +142,7 @@ const bodyLangs = (req) =>
  */
 app.put('/api/diaries/:id/typing', async (req, res) => {
   const { id } = req.params;
-  if (!(await hasDiary(id))) {
+  if (!(await req.store.hasDiary(id))) {
     res.status(404).json({ error: `일기를 찾을 수 없다: ${id}` });
     return;
   }
@@ -126,7 +157,7 @@ app.put('/api/diaries/:id/typing', async (req, res) => {
   }
 
   try {
-    const doc = await saveTyping(id, lang, req.body.typing);
+    const doc = await req.store.saveTyping(id, lang, req.body.typing);
     res.json({ ok: true, typingUpdatedAt: doc.typingUpdatedAt });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -173,7 +204,7 @@ app.post('/api/lookup', async (req, res) => {
  */
 app.post('/api/diaries/:id/qa', async (req, res) => {
   const { id } = req.params;
-  if (!(await hasDiary(id))) {
+  if (!(await req.store.hasDiary(id))) {
     res.status(404).json({ error: `일기를 찾을 수 없다: ${id}` });
     return;
   }
@@ -194,7 +225,7 @@ app.post('/api/diaries/:id/qa', async (req, res) => {
     return;
   }
 
-  const doc = await readDiary(id);
+  const doc = await req.store.readDiary(id);
   if (!doc.langs?.[lang]) {
     res.status(400).json({ error: `이 일기에는 ${lang} 번역이 없다` });
     return;
@@ -230,7 +261,7 @@ app.post('/api/diaries/:id/qa', async (req, res) => {
       { role: 'user', text: question, at: new Date().toISOString() },
       { role: 'assistant', text, at: new Date().toISOString() },
     ];
-    await saveQa(id, lang, turns);
+    await req.store.saveQa(id, lang, turns);
     emit({ done: true, turns, truncated });
   } catch (err) {
     emit({ error: err.message });
@@ -242,7 +273,7 @@ app.post('/api/diaries/:id/qa', async (req, res) => {
 /** 그 언어의 문답을 통째로 지운다. */
 app.delete('/api/diaries/:id/qa', async (req, res) => {
   const { id } = req.params;
-  if (!(await hasDiary(id))) {
+  if (!(await req.store.hasDiary(id))) {
     res.status(404).json({ error: `일기를 찾을 수 없다: ${id}` });
     return;
   }
@@ -252,7 +283,7 @@ app.delete('/api/diaries/:id/qa', async (req, res) => {
     return;
   }
   try {
-    await saveQa(id, lang, []);
+    await req.store.saveQa(id, lang, []);
     res.json({ turns: [] });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -275,7 +306,7 @@ app.post('/api/diaries', async (req, res) => {
 
   const { sentences } = splitKoreanDiary(text);
   const doc = {
-    id: await nextId(),
+    id: await req.store.nextId(),
     title: titleOf(text),
     createdAt: new Date().toISOString(),
     text,
@@ -289,7 +320,7 @@ app.post('/api/diaries', async (req, res) => {
       res.status(502).json({ error: `번역이 모두 실패했다\n${failed.join('\n')}` });
       return;
     }
-    await writeDiary(doc);
+    await req.store.writeDiary(doc);
     res.status(201).json({ ...doc, warnings: failed });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -303,7 +334,7 @@ app.post('/api/diaries', async (req, res) => {
  */
 app.put('/api/diaries/:id', async (req, res) => {
   const { id } = req.params;
-  if (!(await hasDiary(id))) {
+  if (!(await req.store.hasDiary(id))) {
     res.status(404).json({ error: `일기를 찾을 수 없다: ${id}` });
     return;
   }
@@ -317,7 +348,7 @@ app.put('/api/diaries/:id', async (req, res) => {
     return;
   }
 
-  const previous = await readDiary(id);
+  const previous = await req.store.readDiary(id);
   const { sentences } = splitKoreanDiary(text);
   // 문장과 번역이 달라지므로 타이핑과 문답은 맥락이 어긋난다. 둘 다 버린다.
   const doc = {
@@ -336,7 +367,7 @@ app.put('/api/diaries/:id', async (req, res) => {
       res.status(502).json({ error: `번역이 모두 실패했다\n${failed.join('\n')}` });
       return;
     }
-    await writeDiary(doc);
+    await req.store.writeDiary(doc);
     res.json({ ...doc, warnings: failed });
   } catch (err) {
     res.status(500).json({ error: err.message });
