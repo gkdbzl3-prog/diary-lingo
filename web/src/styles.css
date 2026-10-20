@@ -959,7 +959,11 @@ body {
 @media (max-width: 560px) {
   .dict-toggle {
     left: -24px;
-    top: 62%;
+    /* 가운데에 있으면 읽는 자리를 거스른다. 오른쪽 아래 구석에 붙은 것처럼
+       아래 가장자리 기준으로 잡는다(화면 높이가 달라져도 자리가 같다). */
+    top: auto;
+    bottom: 72px;
+    transform: none;
     width: 24px;
     height: 76px;
     gap: 2px;
