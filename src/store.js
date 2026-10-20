@@ -1,91 +1,33 @@
-// 일기 저장소. 6단계에서 Firestore로 갈아타기 쉽게 읽고 쓰는 함수만 내보낸다.
-// 지금은 data/<id>.json 한 파일에 원문과 언어별 결과를 같이 담는다.
+// 일기 저장소. 읽고 쓰는 함수는 여기에서만 내보낸다.
+//
+// 자격증명이 있으면 Firestore, 없으면 data/<id>.json 파일이다.
+//   FIREBASE_SERVICE_ACCOUNT        서비스 계정 JSON 통째로 (fly secret)
+//   GOOGLE_APPLICATION_CREDENTIALS  그 JSON 파일 경로 (로컬)
+// 둘 다 없으면 파일로 떨어진다 — 키 없이도 `pnpm dev`와 테스트가 그대로 돈다.
+// 억지로 한쪽을 고르려면 DIARY_LINGO_STORE=firestore|files 로 못 박는다.
+//
+// 함수는 전부 async다. 부르는 쪽은 어느 저장소인지 알 필요가 없다.
 
-import fs from 'node:fs';
-import path from 'node:path';
+const forced = process.env.DIARY_LINGO_STORE;
+const hasCredential = Boolean(
+  process.env.FIREBASE_SERVICE_ACCOUNT || process.env.GOOGLE_APPLICATION_CREDENTIALS,
+);
 
-const DIR = process.env.DIARY_LINGO_DATA ?? 'data';
+export const backend = forced ?? (hasCredential ? 'firestore' : 'files');
 
-function fileOf(id) {
-  return path.join(DIR, `${id}.json`);
-}
+const impl = backend === 'firestore'
+  ? await import('./store/firestore.js')
+  : await import('./store/files.js');
 
-/** 파일 이름으로 쓸 수 있는 id만 허용한다. 경로 조작을 막는다. */
-export function isValidId(id) {
-  return typeof id === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(id) && !id.includes('..');
-}
-
-/** 일기 첫 문장 앞부분을 제목으로 쓴다. */
-export function titleOf(text) {
-  const first = text.trim().split(/\r?\n/)[0] ?? '';
-  return first.length > 40 ? `${first.slice(0, 40)}…` : first;
-}
-
-/** 겹치지 않는 id를 만든다. diary-01, diary-02 … */
-export function nextId(prefix = 'diary') {
-  for (let n = 1; n < 1000; n += 1) {
-    const id = `${prefix}-${String(n).padStart(2, '0')}`;
-    if (!fs.existsSync(fileOf(id))) return id;
-  }
-  throw new Error('id를 더 만들 수 없다');
-}
-
-export function listDiaries() {
-  if (!fs.existsSync(DIR)) return [];
-  return fs
-    .readdirSync(DIR)
-    .filter((f) => f.endsWith('.json'))
-    .map((f) => {
-      const doc = readDiary(path.basename(f, '.json'));
-      return {
-        id: doc.id,
-        title: doc.title,
-        createdAt: doc.createdAt,
-        sentenceCount: doc.ko?.sentences?.length ?? 0,
-        langs: Object.keys(doc.langs ?? {}),
-      };
-    })
-    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-}
-
-export function readDiary(id) {
-  if (!isValidId(id)) throw new Error(`쓸 수 없는 id: ${id}`);
-  return JSON.parse(fs.readFileSync(fileOf(id), 'utf8'));
-}
-
-export function hasDiary(id) {
-  return isValidId(id) && fs.existsSync(fileOf(id));
-}
-
-export function writeDiary(doc) {
-  if (!isValidId(doc.id)) throw new Error(`쓸 수 없는 id: ${doc.id}`);
-  fs.mkdirSync(DIR, { recursive: true });
-  fs.writeFileSync(fileOf(doc.id), `${JSON.stringify(doc, null, 2)}\n`);
-  return doc;
-}
-
-/**
- * 타이핑 중인 내용을 임시저장한다. 번역 결과는 건드리지 않는다.
- * typing[lang][sid][줄 번호] = zh는 칸마다 글자 배열, ja·en은 줄 문자열.
- */
-export function saveTyping(id, lang, typing) {
-  const doc = readDiary(id);
-  doc.typing = doc.typing ?? {};
-  doc.typing[lang] = typing;
-  doc.typingUpdatedAt = new Date().toISOString();
-  return writeDiary(doc);
-}
-
-/** 일기를 지운다. 되돌릴 수 없으므로 화면에서 두 번 확인한 뒤에만 부른다. */
-export function removeDiary(id) {
-  if (!isValidId(id)) throw new Error(`쓸 수 없는 id: ${id}`);
-  fs.rmSync(fileOf(id));
-}
-
-/** Q&A 문답을 저장한다. 번역 결과와 타이핑은 건드리지 않는다. */
-export function saveQa(id, lang, turns) {
-  const doc = readDiary(id);
-  doc.qa = doc.qa ?? {};
-  doc.qa[lang] = turns;
-  return writeDiary(doc);
-}
+export const {
+  isValidId,
+  titleOf,
+  nextId,
+  listDiaries,
+  readDiary,
+  hasDiary,
+  writeDiary,
+  saveTyping,
+  removeDiary,
+  saveQa,
+} = impl;

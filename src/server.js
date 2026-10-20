@@ -7,6 +7,7 @@ import { lookup } from './lookup.js';
 import { SUPPORTED } from './langs.js';
 import { config } from './config.js';
 import {
+  backend,
   hasDiary,
   listDiaries,
   nextId,
@@ -24,30 +25,36 @@ const app = express();
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, model: config.model, langs: SUPPORTED, hasKey: Boolean(process.env.ANTHROPIC_API_KEY) });
+  res.json({
+    ok: true,
+    model: config.model,
+    langs: SUPPORTED,
+    hasKey: Boolean(process.env.ANTHROPIC_API_KEY),
+    store: backend,
+  });
 });
 
-app.get('/api/diaries', (req, res) => {
-  res.json({ diaries: listDiaries() });
+app.get('/api/diaries', async (req, res) => {
+  res.json({ diaries: await listDiaries() });
 });
 
-app.get('/api/diaries/:id', (req, res) => {
+app.get('/api/diaries/:id', async (req, res) => {
   const { id } = req.params;
-  if (!hasDiary(id)) {
+  if (!(await hasDiary(id))) {
     res.status(404).json({ error: `일기를 찾을 수 없다: ${id}` });
     return;
   }
-  res.json(readDiary(id));
+  res.json(await readDiary(id));
 });
 
-app.delete('/api/diaries/:id', (req, res) => {
+app.delete('/api/diaries/:id', async (req, res) => {
   const { id } = req.params;
-  if (!hasDiary(id)) {
+  if (!(await hasDiary(id))) {
     res.status(404).json({ error: `일기를 찾을 수 없다: ${id}` });
     return;
   }
   try {
-    removeDiary(id);
+    await removeDiary(id);
     res.json({ ok: true, id });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -102,9 +109,9 @@ const bodyLangs = (req) =>
  * 타이핑 중인 내용 임시저장. 화면의 "임시저장" 버튼이 부른다.
  * body: { lang, typing }
  */
-app.put('/api/diaries/:id/typing', (req, res) => {
+app.put('/api/diaries/:id/typing', async (req, res) => {
   const { id } = req.params;
-  if (!hasDiary(id)) {
+  if (!(await hasDiary(id))) {
     res.status(404).json({ error: `일기를 찾을 수 없다: ${id}` });
     return;
   }
@@ -119,7 +126,7 @@ app.put('/api/diaries/:id/typing', (req, res) => {
   }
 
   try {
-    const doc = saveTyping(id, lang, req.body.typing);
+    const doc = await saveTyping(id, lang, req.body.typing);
     res.json({ ok: true, typingUpdatedAt: doc.typingUpdatedAt });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -166,7 +173,7 @@ app.post('/api/lookup', async (req, res) => {
  */
 app.post('/api/diaries/:id/qa', async (req, res) => {
   const { id } = req.params;
-  if (!hasDiary(id)) {
+  if (!(await hasDiary(id))) {
     res.status(404).json({ error: `일기를 찾을 수 없다: ${id}` });
     return;
   }
@@ -187,7 +194,7 @@ app.post('/api/diaries/:id/qa', async (req, res) => {
     return;
   }
 
-  const doc = readDiary(id);
+  const doc = await readDiary(id);
   if (!doc.langs?.[lang]) {
     res.status(400).json({ error: `이 일기에는 ${lang} 번역이 없다` });
     return;
@@ -223,7 +230,7 @@ app.post('/api/diaries/:id/qa', async (req, res) => {
       { role: 'user', text: question, at: new Date().toISOString() },
       { role: 'assistant', text, at: new Date().toISOString() },
     ];
-    saveQa(id, lang, turns);
+    await saveQa(id, lang, turns);
     emit({ done: true, turns, truncated });
   } catch (err) {
     emit({ error: err.message });
@@ -233,9 +240,9 @@ app.post('/api/diaries/:id/qa', async (req, res) => {
 });
 
 /** 그 언어의 문답을 통째로 지운다. */
-app.delete('/api/diaries/:id/qa', (req, res) => {
+app.delete('/api/diaries/:id/qa', async (req, res) => {
   const { id } = req.params;
-  if (!hasDiary(id)) {
+  if (!(await hasDiary(id))) {
     res.status(404).json({ error: `일기를 찾을 수 없다: ${id}` });
     return;
   }
@@ -245,7 +252,7 @@ app.delete('/api/diaries/:id/qa', (req, res) => {
     return;
   }
   try {
-    saveQa(id, lang, []);
+    await saveQa(id, lang, []);
     res.json({ turns: [] });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -268,7 +275,7 @@ app.post('/api/diaries', async (req, res) => {
 
   const { sentences } = splitKoreanDiary(text);
   const doc = {
-    id: nextId(),
+    id: await nextId(),
     title: titleOf(text),
     createdAt: new Date().toISOString(),
     text,
@@ -282,7 +289,7 @@ app.post('/api/diaries', async (req, res) => {
       res.status(502).json({ error: `번역이 모두 실패했다\n${failed.join('\n')}` });
       return;
     }
-    writeDiary(doc);
+    await writeDiary(doc);
     res.status(201).json({ ...doc, warnings: failed });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -296,7 +303,7 @@ app.post('/api/diaries', async (req, res) => {
  */
 app.put('/api/diaries/:id', async (req, res) => {
   const { id } = req.params;
-  if (!hasDiary(id)) {
+  if (!(await hasDiary(id))) {
     res.status(404).json({ error: `일기를 찾을 수 없다: ${id}` });
     return;
   }
@@ -310,7 +317,7 @@ app.put('/api/diaries/:id', async (req, res) => {
     return;
   }
 
-  const previous = readDiary(id);
+  const previous = await readDiary(id);
   const { sentences } = splitKoreanDiary(text);
   // 문장과 번역이 달라지므로 타이핑과 문답은 맥락이 어긋난다. 둘 다 버린다.
   const doc = {
@@ -329,7 +336,7 @@ app.put('/api/diaries/:id', async (req, res) => {
       res.status(502).json({ error: `번역이 모두 실패했다\n${failed.join('\n')}` });
       return;
     }
-    writeDiary(doc);
+    await writeDiary(doc);
     res.json({ ...doc, warnings: failed });
   } catch (err) {
     res.status(500).json({ error: err.message });

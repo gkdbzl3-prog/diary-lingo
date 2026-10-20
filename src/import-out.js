@@ -59,6 +59,6 @@ for (const [base, langs] of byBase) {
     doc.langs[lang] = { meta: d.meta ?? {}, sentences: d.sentences ?? [], notes: d.notes ?? { vocab: [], highlights: [] } };
   }
 
-  writeDiary(doc);
+  await writeDiary(doc);
   console.log(`data/${base}.json ← ${[...langs.keys()].join(', ')} (문장 ${sentences.length}개)`);
 }

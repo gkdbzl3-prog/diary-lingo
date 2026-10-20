@@ -4,3 +4,7 @@ out/
 *.log
 data/
 web/dist/
+
+# Firebase 서비스 계정 키. 저장소에 절대 올라가면 안 된다.
+*firebase-adminsdk*.json
+serviceAccount*.json
