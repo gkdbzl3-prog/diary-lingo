@@ -1,0 +1,74 @@
+name: Deploy
+
+# main에 푸시하면 fly.io로 배포한다. 푸시가 곧 배포다.
+on:
+  push:
+    branches:
+      - main
+  # 코드 변화 없이 다시 배포해야 할 때를 위한 수동 트리거.
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to fly.io
+    runs-on: ubuntu-latest
+    concurrency: deploy-group
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # 배포 전에 터지는 건 여기서 걸린다. 저장소를 안 건드리는 순수 함수 테스트다.
+      - run: pnpm test
+
+      - run: pnpm build
+
+      # 토큰이 없으면 실패시키지 않는다. 푸시마다 "run failed" 알림이 울리면 괴롭다.
+      # 대신 경고와 요약으로 눈에 띄게 남긴다.
+      - name: Check deploy token
+        id: cred
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          if [ -n "$FLY_API_TOKEN" ]; then
+            echo "has=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "has=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+        if: steps.cred.outputs.has == 'yes'
+
+      - name: Deploy
+        if: steps.cred.outputs.has == 'yes'
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --remote-only
+
+      - name: 배포 건너뜀 (토큰 없음)
+        if: steps.cred.outputs.has == 'no'
+        run: |
+          echo "::warning::배포 안 됨 — FLY_API_TOKEN 시크릿이 없다. 빌드와 테스트만 확인했다."
+          {
+            echo "### ⚠️ 배포하지 않았습니다"
+            echo
+            echo "빌드와 테스트는 통과했지만 fly 토큰이 없어 올리지 못했습니다."
+            echo "자동 배포를 켜려면:"
+            echo
+            echo '```'
+            echo "fly tokens create deploy -a diary-lingo"
+            echo "# 나온 토큰을 GitHub → Settings → Secrets → Actions 의 FLY_API_TOKEN 에 넣기"
+            echo "# 또는: fly tokens create deploy -a diary-lingo | gh secret set FLY_API_TOKEN"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

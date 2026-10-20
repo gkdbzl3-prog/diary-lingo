@@ -1,0 +1,10 @@
+# 이 저장소만 따로 설치되게 한다. 위(/home/nal/Projects)의 워크스페이스에 딸려 있으면
+# 락파일이 저장소 밖에 생겨서 CI와 도커가 --frozen-lockfile로 설치할 수 없다.
+packages: []
+
+# pnpm 12는 설치 스크립트를 기본으로 막고, 막힌 게 있으면 설치를 실패시킨다
+# (ERR_PNPM_IGNORED_BUILDS). 이 둘은 firebase-admin이 딸고 오는 것이라 허용한다.
+# 적는 칸은 package.json의 onlyBuiltDependencies가 아니라 여기 allowBuilds다.
+allowBuilds:
+  '@firebase/util': true
+  protobufjs: true

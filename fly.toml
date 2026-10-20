@@ -1,0 +1,21 @@
+# fly.io 설정. 푸시하면 GitHub Actions(.github/workflows/deploy.yml)가 이걸로 배포한다.
+#
+# 저장은 Firestore이고 디스크에 남기는 것이 없어서 머신을 꺼도 된다.
+# min_machines_running = 0 이라 아무도 안 쓰면 꺼져 있다(그만큼 싸다).
+# 대신 한동안 안 쓰다 들어가면 첫 요청이 몇 초 걸린다.
+
+app = 'diary-lingo'
+primary_region = 'nrt'
+
+[build]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  memory = '512mb'
+  cpus = 1
