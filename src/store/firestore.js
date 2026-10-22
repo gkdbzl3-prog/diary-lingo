@@ -88,6 +88,7 @@ export function storeFor(device) {
       ko: JSON.parse(meta.ko ?? '{}'),
       langs,
     };
+    if (meta.updatedAt) doc.updatedAt = meta.updatedAt;
     if (meta.typingUpdatedAt) doc.typingUpdatedAt = meta.typingUpdatedAt;
     if (Object.keys(typing).length > 0) doc.typing = typing;
     if (Object.keys(qa).length > 0) doc.qa = qa;
@@ -153,6 +154,7 @@ export function storeFor(device) {
         langs: Object.keys(doc.langs ?? {}),
         text: doc.text ?? '',
         ko: JSON.stringify(doc.ko ?? {}),
+        updatedAt: doc.updatedAt ?? null,
         typingUpdatedAt: doc.typingUpdatedAt ?? null,
       });
 
