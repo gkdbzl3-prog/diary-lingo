@@ -74,6 +74,8 @@ export async function translate({ lang, sentences, log = console.log }) {
   const notes = { vocab: [], highlights: [] };
   const usages = [];
   const failedIds = [];
+  // 실패 사유. 로그로만 흘려보내면 터미널을 닫는 순간 사라져서 왜 비었는지 알 수 없다.
+  const errors = [];
 
   const runChunk = async (ids, index) => {
     const tag = `[${lang} ${index + 1}/${chunks.length}]`;
@@ -99,6 +101,7 @@ export async function translate({ lang, sentences, log = console.log }) {
         }));
       } catch (err) {
         log(`${tag} ! 호출 실패: ${err.message}`);
+        errors.push(`${tag} 호출 실패: ${err.message}`);
         break;
       }
 
@@ -125,7 +128,10 @@ export async function translate({ lang, sentences, log = console.log }) {
       problems = [...failed.values()].flat();
     }
 
-    if (pending.length > 0) failedIds.push(...pending);
+    if (pending.length > 0) {
+      failedIds.push(...pending);
+      if (problems?.length > 0) errors.push(`${tag} 검증 실패: ${problems.join(' / ')}`);
+    }
   };
 
   if (chunks.length > 0) {
@@ -148,6 +154,7 @@ export async function translate({ lang, sentences, log = console.log }) {
       highlights: [...notes.highlights].sort(bySid),
     },
     failedIds: failedIds.sort((a, b) => a - b),
+    errors,
     usages,
     chunkCount: chunks.length,
   };

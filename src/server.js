@@ -108,12 +108,22 @@ async function fillTranslations(doc, langs) {
       return;
     }
     const [lang, result] = entry.value;
+    // 한 문장도 못 건지면 빈 껍데기가 남는다. 그대로 저장하면 화면이 조용히 비어 보이고
+    // (langs에 키가 있으니 "모두 실패" 검사도 통과한다) 왜인지도 알 수 없다.
+    // 사유를 들고 실패로 올려서 날님이 빈 화면 대신 까닭을 보게 한다.
+    if (result.sentences.length === 0) {
+      const why = result.errors.length > 0 ? `\n${result.errors.join('\n')}` : '';
+      failed.push(`${lang}: 문장 ${result.failedIds.length}개 전부 실패${why}`);
+      return;
+    }
     doc.langs[lang] = {
       meta: {
         model: config.model,
         effort: config.effort,
         chunkCount: result.chunkCount,
         failedIds: result.failedIds,
+        // 일부만 실패했을 때 까닭을 일기에 남겨 둔다. 나중에 되짚을 단서가 된다.
+        errors: result.errors,
       },
       sentences: result.sentences,
       notes: result.notes,
