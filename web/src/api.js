@@ -8,12 +8,43 @@ async function json(res) {
 
 export const listDiaries = () => fetch('/api/diaries').then(json).then((d) => d.diaries);
 export const getDiary = (id) => fetch(`/api/diaries/${id}`).then(json);
-export const createDiary = (text, langs) =>
-  fetch('/api/diaries', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
+/** Receive finished languages immediately; resolve only after the server saves the diary. */
+async function translateDiary(url, method, text, langs, onProgress) {
+  const res = await fetch(url, {
+    method,
+    headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
     body: JSON.stringify({ text, langs }),
-  }).then(json);
+  });
+  if (!res.ok || !res.headers.get('content-type')?.includes('text/event-stream')) return json(res);
+  if (!res.body) throw new Error('번역 연결이 끊겼다. 일기 목록에서 저장 여부를 확인해 주세요.');
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const frames = buffer.split('\n\n');
+      buffer = frames.pop() ?? '';
+      for (const frame of frames) {
+        const data = frame.split('\n').filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trimStart()).join('\n');
+        if (!data) continue; // Heartbeat comments keep long translations connected.
+        const event = JSON.parse(data);
+        if (event.type === 'error') throw new Error(event.error);
+        if (event.type === 'done') return event.doc;
+        onProgress?.(event);
+      }
+    }
+    throw new Error('번역 연결이 끊겼다. 일기 목록에서 저장 여부를 확인해 주세요.');
+  } finally {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+}
+
+export const createDiary = (text, langs, onProgress) =>
+  translateDiary('/api/diaries', 'POST', text, langs, onProgress);
 export const saveTyping = (id, lang, typing) =>
   fetch(`/api/diaries/${id}/typing`, {
     method: 'PUT',
@@ -22,12 +53,8 @@ export const saveTyping = (id, lang, typing) =>
   }).then(json);
 
 /** 원문을 고쳐 다시 번역한다. id는 그대로 두고 타이핑한 내용은 버린다. */
-export const retranslateDiary = (id, text, langs) =>
-  fetch(`/api/diaries/${id}`, {
-    method: 'PUT',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ text, langs }),
-  }).then(json);
+export const retranslateDiary = (id, text, langs, onProgress) =>
+  translateDiary(`/api/diaries/${id}`, 'PUT', text, langs, onProgress);
 
 /** 일기를 지운다. 되돌릴 수 없다. */
 export const deleteDiary = (id) =>

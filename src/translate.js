@@ -55,8 +55,7 @@ function mergeNotes(into, notes) {
 /**
  * 한국어 문장 목록을 한 언어의 학습 데이터로 바꾼다.
  *
- * - 문장을 묶음으로 나눠 보내고, 1차 묶음만 혼자 먼저 보내 캐시를 채운다.
- *   전부 한꺼번에 보내면 아직 캐시가 없어 다 미스가 된다.
+ * - 첫 묶음부터 제한된 수만큼 동시에 보낸다. 캐시 적중보다 대기 시간 단축을 우선한다.
  * - 검증에 실패한 문장만 그 묶음 안에서 최대 config.maxRetries번 다시 물어본다.
  */
 export async function translate({ lang, sentences, log = console.log }) {
@@ -134,12 +133,7 @@ export async function translate({ lang, sentences, log = console.log }) {
     }
   };
 
-  if (chunks.length > 0) {
-    await runChunk(chunks[0], 0);
-  }
-  if (chunks.length > 1) {
-    await runLimited(chunks.slice(1), config.chunkConcurrency, (ids, i) => runChunk(ids, i + 1));
-  }
+  await runLimited(chunks, config.chunkConcurrency, runChunk);
 
   // 묶음이 끝난 순서는 제각각이므로 문장 id 기준으로 다시 줄 세운다.
   const bySid = (a, b) => a.sid - b.sid;

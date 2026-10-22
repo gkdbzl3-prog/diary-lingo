@@ -32,6 +32,8 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [translationWarnings, setTranslationWarnings] = useState([]);
+  const [failedLangs, setFailedLangs] = useState([]);
   // 삭제는 되돌릴 수 없다. 한 번 더 눌러야 지워진다.
   const [confirmDelete, setConfirmDelete] = useState(false);
   // 저장 직후 잠깐만 버튼 글자가 "저장됨"이 된다. 자리를 따로 먹지 않게.
@@ -51,6 +53,7 @@ export default function App() {
     (next) => {
       setDoc(next);
       setConfirmDelete(false);
+      setTranslationWarnings(next?.warnings ?? []);
       // 원문은 지우지 않는다. 고쳐서 다시 변환할 수 있게 입력란에 그대로 둔다.
       setDraft(next?.text ?? '');
       store.load(next?.typing, next?.typingUpdatedAt);
@@ -88,16 +91,32 @@ export default function App() {
   const submit = async (e) => {
     e?.preventDefault();
     if (busy || draft.trim() === '' || !changed) return;
+    const previous = doc;
     setBusy(true);
     setError('');
+    setTranslationWarnings([]);
+    setFailedLangs([]);
+    setConfirmDelete(false);
+    setDoc(null);
+    const onProgress = (event) => {
+      if (event.type === 'language') {
+        setDoc(event.doc);
+        setLang((current) => event.doc.langs[current] ? current : event.lang);
+      } else if (event.type === 'warning') {
+        setFailedLangs((current) => [...current, event.lang]);
+        setTranslationWarnings((current) => [...current, event.message]);
+      }
+    };
     try {
-      // 일기를 열어 둔 채 원문을 고쳤으면 그 일기를 다시 번역한다. 새로 쌓지 않는다.
-      const result = doc
-        ? await retranslateDiary(doc.id, draft, ORDER)
-        : await createDiary(draft, ORDER);
-      await refresh();
+      const result = previous
+        ? await retranslateDiary(previous.id, draft, ORDER, onProgress)
+        : await createDiary(draft, ORDER, onProgress);
       openDoc(result);
+      // A list refresh failure must not discard an already saved translation.
+      await refresh().catch((err) => setError(`번역은 저장됐지만 목록을 불러오지 못했다: ${err.message}`));
     } catch (err) {
+      setDoc(previous);
+      setLang((current) => previous?.langs?.[current] ? current : (ORDER.find((l) => previous?.langs?.[l]) ?? 'zh'));
       setError(err.message);
     } finally {
       setBusy(false);
@@ -129,7 +148,7 @@ export default function App() {
   };
 
   const save = useCallback(async () => {
-    if (!doc || saving) return;
+    if (!doc || saving || busy) return;
     setSaving(true);
     setError('');
     try {
@@ -141,7 +160,7 @@ export default function App() {
     } finally {
       setSaving(false);
     }
-  }, [doc, lang, saving, store]);
+  }, [doc, lang, saving, busy, store]);
 
   useEffect(() => {
     if (!justSaved) return undefined;
@@ -168,14 +187,14 @@ export default function App() {
 
   // 저장 안 한 게 있으면 창을 닫기 전에 한 번 묻는다
   useEffect(() => {
-    if (!store.dirty) return undefined;
+    if (!store.dirty && !busy) return undefined;
     const warn = (e) => {
       e.preventDefault();
       e.returnValue = '';
     };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
-  }, [store.dirty]);
+  }, [store.dirty, busy]);
 
   const report = useCallback(
     (sid, lineIndex, value) => store.report(lang, sid, lineIndex, value),
@@ -195,8 +214,11 @@ export default function App() {
     <main className="app" ref={topRef}>
       <header className="app-head">
         <h1>Diary-lingo</h1>
-        <select value={doc?.id ?? ''} onChange={(e) => open(e.target.value)}>
+        <select disabled={busy} value={doc?.id ?? ''} onChange={(e) => open(e.target.value)}>
           <option value="">새 일기</option>
+          {doc && !diaries.some((d) => d.id === doc.id) ? (
+            <option value={doc.id}>{short(doc.title)} · 번역 중</option>
+          ) : null}
           {diaries.map((d) => (
             <option key={d.id} value={d.id}>
               {d.id} · {short(d.title)}
@@ -205,13 +227,14 @@ export default function App() {
         </select>
         {doc ? (
           <div className="head-actions">
-            <button type="button" className="tab" onClick={newDiary}>
+            <button type="button" className="tab" disabled={busy} onClick={newDiary}>
               새 일기
             </button>
             {/* 한 번 누르면 옆에 취소가 생긴다. 삭제를 한 번 더 누르면 그때 지워진다. */}
             <button
               type="button"
               className={confirmDelete ? 'tab tab-delete tab-armed' : 'tab tab-delete'}
+              disabled={busy}
               onClick={remove}
               title={
                 confirmDelete
@@ -232,6 +255,7 @@ export default function App() {
 
       <form className="new-diary" onSubmit={submit}>
         <textarea
+          disabled={busy}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           rows={4}
@@ -257,7 +281,10 @@ export default function App() {
       ) : null}
 
       {busy ? (
-        <p className="hint">중국어·일본어·영어를 한꺼번에 번역한다. 문장 10개쯤이면 2~3분 걸린다.</p>
+        <p className="hint" role="status">
+          {ORDER.map((l) => `${LABEL[l]} ${available.includes(l) ? '완료' : failedLangs.includes(l) ? '실패' : '번역 중…'}`).join(' · ')}
+          <br />먼저 끝난 언어부터 읽을 수 있습니다. 번역이 끝나면 저장되며, 연습과 질문을 할 수 있습니다.
+        </p>
       ) : null}
 
       {doc && changed && !busy ? (
@@ -267,7 +294,10 @@ export default function App() {
         </p>
       ) : null}
 
-      {error ? <p className="error">{error}</p> : null}
+      {error ? <p className="error" role="alert">{error}</p> : null}
+      {translationWarnings.length > 0 ? (
+        <p className="error" role="alert">일부 번역을 완료하지 못했습니다. {translationWarnings.join(' / ')}</p>
+      ) : null}
 
       {doc ? (
         <div className="toolbar">
@@ -278,7 +308,7 @@ export default function App() {
                 key={l}
                 className={l === lang ? 'tab tab-on' : 'tab'}
                 disabled={!available.includes(l)}
-                title={available.includes(l) ? '' : '이 일기에는 아직 없다'}
+                title={available.includes(l) ? '' : failedLangs.includes(l) ? '번역 실패' : busy ? '번역 중' : '이 일기에는 아직 없다'}
                 onClick={() => setLang(l)}
               >
                 {LABEL[l]}
@@ -287,19 +317,19 @@ export default function App() {
           </div>
 
           <div className="toolbar-right">
-            {hasNotes && !showFull ? (
+            {hasNotes && !showFull && !busy ? (
               <button type="button" className="tab" onClick={() => scrollTo(notesRef)}>
                 어휘·문법 ↓
               </button>
             ) : null}
-            <button type="button" className="tab" onClick={() => setShowFull((v) => !v)}>
+            <button type="button" className="tab" disabled={busy} onClick={() => setShowFull((v) => !v)}>
               {showFull ? '연습으로' : '전체 보기'}
             </button>
             <button
               type="button"
               className={justSaved ? 'save save-done' : 'save'}
               onClick={save}
-              disabled={saving || !store.dirty}
+              disabled={busy || saving || !store.dirty}
               title={store.savedAt ? `마지막 저장 ${clock(store.savedAt)}` : ''}
             >
               {saving ? '저장 중…' : justSaved ? '저장됨' : '임시저장'}
@@ -310,11 +340,11 @@ export default function App() {
 
       {doc && !current ? <p className="hint">이 일기에는 {LABEL[lang]} 결과가 없다.</p> : null}
 
-      {current && showFull ? (
+      {current && (showFull || busy) ? (
         <FullText koSentences={doc.ko.sentences} langSentences={current.sentences} lang={lang} />
       ) : null}
 
-      {current && !showFull ? (
+      {current && !showFull && !busy ? (
         <>
           <p className="hint">
             {lang === 'zh'
@@ -336,7 +366,7 @@ export default function App() {
         </>
       ) : null}
 
-      {current ? (
+      {current && !busy ? (
         <Qa
           key={`${doc.id}:${lang}`}
           diaryId={doc.id}
@@ -354,7 +384,7 @@ export default function App() {
             ↑ 맨 위로
           </button>
         ) : null}
-        <Device />
+        {!busy ? <Device /> : null}
       </footer>
     </main>
   );
