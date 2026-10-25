@@ -571,24 +571,32 @@ body {
   line-height: 1.7;
 }
 
-/* 일본어: 요미가나는 붙여 쓰고, 해석을 입력란 위에 둔다 */
+/* 일본어: 한자 예문에 후리가나를 얹고, 해석을 입력란 위에 둔다 */
 .ja-text,
-.ja-kana,
 .ja-pron {
   margin: 0;
   line-height: 1.45;
 }
 
-/* 한자 예문. 요미가나만 보면 한자를 전혀 못 봐서 맨 위에 둔다.
-   읽을 줄이므로 요미가나보다 크고 선명하다. */
+/* 한자 예문. 한자가 그대로 보이고 읽기는 그 위에 붙는다.
+   읽을거리지 쳐야 할 답이 아니라서 발음 줄과 같은 흐린 색이다. */
 .ja-text {
-  color: var(--fg);
-  font-size: 19px;
+  color: var(--muted);
+  font-size: 17px;
+  /* 후리가나가 윗줄을 밀지 않게 줄 높이를 넉넉히 준다. */
+  line-height: 2.1;
 }
 
-.ja-kana {
-  color: var(--muted);
-  font-size: 15px;
+.ja-text ruby {
+  ruby-align: center;
+}
+
+.ja-text rt {
+  font-size: 0.55em;
+  line-height: 1.1;
+  color: inherit;
+  /* 한자에서 조금 띄운다. 붙으면 획과 섞여 읽기 어렵다. */
+  transform: translateY(1px);
 }
 
 .ja-pron {
