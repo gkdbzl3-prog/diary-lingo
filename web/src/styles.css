@@ -572,10 +572,18 @@ body {
 }
 
 /* 일본어: 요미가나는 붙여 쓰고, 해석을 입력란 위에 둔다 */
+.ja-text,
 .ja-kana,
 .ja-pron {
   margin: 0;
   line-height: 1.45;
+}
+
+/* 한자 예문. 요미가나만 보면 한자를 전혀 못 봐서 맨 위에 둔다.
+   읽을 줄이므로 요미가나보다 크고 선명하다. */
+.ja-text {
+  color: var(--fg);
+  font-size: 19px;
 }
 
 .ja-kana {

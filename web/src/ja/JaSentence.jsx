@@ -12,6 +12,9 @@ import { lineState } from '../lineState.js';
  * 해석을 입력란 **위에** 둔다. 아웃풋 연습이 목적이라 한국어 뜻을 먼저 읽고
  * 일본어를 만들어 보는 순서가 맞다.
  * 요미가나는 문절 사이를 띄우지 않고 붙여 쓴다(일본어 본래 모습).
+ *
+ * 맨 위에 한자 예문을 둔다. 요미가나만 있으면 한자를 전혀 못 봐서
+ * 무슨 한자를 쓰는 문장인지 알 수 없다.
  */
 function JaLine({ line, initial, onChange }) {
   const [value, setValue] = useState(initial ?? '');
@@ -26,6 +29,7 @@ function JaLine({ line, initial, onChange }) {
 
   return (
     <div className={`line ${lineState(value.trim().length, want.length)}`}>
+      <p className="ja-text">{want}</p>
       <p className="ja-kana">{tokens.map((t) => t.kana ?? '').join('')}</p>
       <p className="ja-pron">{tokens.map((t) => t.pron ?? '').join(' ')}</p>
       <p className="line-gloss">{line.gloss}</p>
