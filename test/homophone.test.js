@@ -3,6 +3,22 @@ import assert from 'node:assert/strict';
 import { isHomophone, loadPinyin, onPinyinReady } from '../web/src/zh/homophone.js';
 import { hasWrongKanji } from '../web/src/ja/kanji.js';
 
+test('ja: 가나와 한자 표기 차이는 양방향으로 경고하지 않는다', () => {
+  for (const [kana, kanji] of [
+    ['わかる', '分かる'],
+    ['うえで', '上で'],
+    ['気持ちがわかる。', '気持ちが分かる。'],
+    ['確認したうえで決める。', '確認した上で決める。'],
+  ]) {
+    assert.equal(hasWrongKanji(kanji, kana), false, `${kana} → ${kanji}`);
+    assert.equal(hasWrongKanji(kana, kanji), false, `${kanji} → ${kana}`);
+  }
+});
+
+test('ja: 표기 차이와 별개인 한자 오변환은 여전히 경고한다', () => {
+  assert.equal(hasWrongKanji('分かるけど日記長が好き', 'わかるけど日記帳が好き'), true);
+});
+
 // 사전은 따로 떼어 늦게 불러온다. 오기 전에는 표시하지 않는 게 정상이다.
 test('zh: 사전을 불러오기 전에는 표시하지 않는다', () => {
   assert.equal(isHomophone('地', '的'), false);
