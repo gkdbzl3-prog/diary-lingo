@@ -317,7 +317,7 @@ export default function App() {
           </div>
 
           <div className="toolbar-right">
-            {hasNotes && !showFull && !busy ? (
+            {hasNotes && !busy ? (
               <button type="button" className="tab" onClick={() => scrollTo(notesRef)}>
                 어휘·문법 ↓
               </button>
@@ -362,9 +362,10 @@ export default function App() {
               onChange={report}
             />
           ))}
-          <Notes notes={current.notes} anchorRef={notesRef} />
         </>
       ) : null}
+
+      {current && !busy ? <Notes notes={current.notes} anchorRef={notesRef} /> : null}
 
       {current && !busy ? (
         <Qa
